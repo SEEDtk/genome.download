@@ -94,6 +94,7 @@ public class ViprProcessor extends BaseProcessor {
                 log.info("Writing {} to {}.", virus.getSourceId(), virusFile);
                 virus.update(virusFile);
             }
+            log.info("All done. {} viruses output.", viruses.size());
         } catch (IOException e) {
             e.printStackTrace();
         }
