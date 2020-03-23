@@ -8,6 +8,7 @@ import org.theseed.utils.ICommand;
  * Download genomes into genome directories.
  *
  * vipr		create the genomes from ViPR download files
+ * patric	download the genomes from the PATRIC website
  *
  */
 public class App
@@ -21,6 +22,9 @@ public class App
         switch (command) {
         case "vipr" :
             processor = new ViprProcessor();
+            break;
+        case "patric" :
+            processor = new PatricProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
