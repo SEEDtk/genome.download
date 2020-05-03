@@ -9,6 +9,7 @@ import org.theseed.utils.ICommand;
  *
  * vipr		create the genomes from ViPR download files
  * patric	download the genomes from the PATRIC website
+ * ncbi		create a genome from NCBI download files
  *
  */
 public class App
@@ -20,6 +21,9 @@ public class App
         ICommand processor;
         // Determine the command to process.
         switch (command) {
+        case "ncbi" :
+            processor = new GffProcessor();
+            break;
         case "vipr" :
             processor = new ViprProcessor();
             break;
