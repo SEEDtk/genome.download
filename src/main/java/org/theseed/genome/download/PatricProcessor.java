@@ -99,7 +99,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
     }
 
     @Override
-    public void run() {
+    public void runCommand() throws Exception {
         // Connect to PATRIC.
         Connection p3 = new Connection();
         try {
@@ -120,8 +120,6 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
                 }
             }
             log.info("All done. {} genomes output.", gCount);
-        } catch (IOException e) {
-            e.printStackTrace();
         } finally {
             // Close the input file.
             this.inStream.close();

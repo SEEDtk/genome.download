@@ -81,16 +81,11 @@ public class GffProcessor extends BaseProcessor {
     }
 
     @Override
-    public void run() {
-        try {
-            Genome genome = new GffGenome(this.nameSuffix, this.domain, this.gffFile, this.fastaFile);
-            File outFile = new File(this.outDir, genome.getId() + ".gto");
-            log.info("Saving genome {} to {}.", genome, outFile);
-            genome.update(outFile);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+    public void runCommand() throws Exception {
+        Genome genome = new GffGenome(this.nameSuffix, this.domain, this.gffFile, this.fastaFile);
+        File outFile = new File(this.outDir, genome.getId() + ".gto");
+        log.info("Saving genome {} to {}.", genome, outFile);
+        genome.update(outFile);
     }
 
 }

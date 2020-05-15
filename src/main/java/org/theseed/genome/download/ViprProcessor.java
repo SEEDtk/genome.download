@@ -82,22 +82,18 @@ public class ViprProcessor extends BaseProcessor {
     }
 
     @Override
-    public void run() {
-        try {
-            // Create the genome builder.
-            ViprGenome.Builder loader = new ViprGenome.Builder();
-            // Load the genomes.
-            Collection<ViprGenome> viruses = loader.Load(gffFile, fastaFile);
-            // Write the genomes to the output directory.
-            for (ViprGenome virus : viruses) {
-                File virusFile = new File(this.outDir, virus.getId() + ".gto");
-                log.info("Writing {} to {}.", virus.getSourceId(), virusFile);
-                virus.update(virusFile);
-            }
-            log.info("All done. {} viruses output.", viruses.size());
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void runCommand() throws Exception {
+        // Create the genome builder.
+        ViprGenome.Builder loader = new ViprGenome.Builder();
+        // Load the genomes.
+        Collection<ViprGenome> viruses = loader.Load(gffFile, fastaFile);
+        // Write the genomes to the output directory.
+        for (ViprGenome virus : viruses) {
+            File virusFile = new File(this.outDir, virus.getId() + ".gto");
+            log.info("Writing {} to {}.", virus.getSourceId(), virusFile);
+            virus.update(virusFile);
         }
+        log.info("All done. {} viruses output.", viruses.size());
     }
 
 }
