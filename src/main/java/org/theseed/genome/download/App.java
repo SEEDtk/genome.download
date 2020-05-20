@@ -10,6 +10,7 @@ import org.theseed.utils.ICommand;
  * vipr		create the genomes from ViPR download files
  * patric	download the genomes from the PATRIC website
  * ncbi		create a genome from NCBI download files
+ * md5		compute MD5s from FASTA files
  *
  */
 public class App
@@ -29,6 +30,9 @@ public class App
             break;
         case "patric" :
             processor = new PatricProcessor();
+            break;
+        case "md5" :
+            processor = new ChecksumProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);

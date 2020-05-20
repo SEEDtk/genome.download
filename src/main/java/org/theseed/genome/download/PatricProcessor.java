@@ -58,7 +58,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
     private boolean clearOutput;
 
     /** name of the output directory */
-    @Argument(index = 0, metaVar = "outDir", usage = "name of the output directory")
+    @Argument(index = 0, metaVar = "outDir", usage = "name of the output directory", required = true)
     private File outDir;
 
     @Override
