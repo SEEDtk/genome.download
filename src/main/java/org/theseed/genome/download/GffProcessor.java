@@ -69,6 +69,18 @@ public class GffProcessor extends BaseProcessor {
 
     @Override
     protected boolean validateParms() throws IOException {
+        // Insure the domain is valid.
+        switch (this.domain) {
+        case "Bacteria" :
+        case "Archaea" :
+        case "Eukaryota" :
+        case "Virus" :
+            log.info("Genome domain is {}.", this.domain);
+            break;
+        default :
+            throw new IllegalArgumentException("Invalid domain " + this.domain + ".");
+        }
+        // Check the files.
         if (! this.gffFile.canRead())
             throw new FileNotFoundException("GFF file " + this.gffFile + " not found or unreadable.");
         if (! this.fastaFile.canRead())

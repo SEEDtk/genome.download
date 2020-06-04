@@ -22,6 +22,9 @@ public class App
         ICommand processor;
         // Determine the command to process.
         switch (command) {
+        case "fasta" :
+            processor = new FastaProcessor();
+            break;
         case "ncbi" :
             processor = new GffProcessor();
             break;
