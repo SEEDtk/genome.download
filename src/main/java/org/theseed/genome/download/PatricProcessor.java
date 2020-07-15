@@ -33,6 +33,7 @@ import org.theseed.utils.ICommand;
  * -i		if specifed, the name of a file to be used as the input (instead of STDIN)
  *
  * --clear		erase the output directory before proceeding
+ * --missing	only download genomes not already present
  *
  * @author Bruce Parrello
  *
@@ -57,6 +58,10 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
     @Option(name = "--clear", usage = "erase output directory before starting")
     private boolean clearOutput;
 
+    /** TRUE to only download genomes not already in the directory */
+    @Option(name = "--missing", usage = "only download new genomes")
+    private boolean missingOnly;
+
     /** name of the output directory */
     @Argument(index = 0, metaVar = "outDir", usage = "name of the output directory", required = true)
     private File outDir;
@@ -66,6 +71,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
         this.column = "genome_id";
         this.inFile = null;
         this.clearOutput = false;
+        this.missingOnly = false;
     }
 
     @Override
@@ -109,14 +115,18 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
             for (TabbedLineReader.Line line : this.inStream) {
                 String genomeId = line.get(this.colIdx);
                 log.info("Processing {}.", genomeId);
-                P3Genome genome = P3Genome.Load(p3, genomeId, P3Genome.Details.FULL);
-                if (genome == null)
-                    log.error("Genome {} not found.", genomeId);
-                else {
-                    File outFile = new File(this.outDir, genomeId + ".gto");
-                    log.info("Writing {} to {}.", genome, outFile);
-                    genome.update(outFile);
-                    gCount++;
+                File outFile = new File(this.outDir, genomeId + ".gto");
+                if (this.missingOnly && outFile.exists()) {
+                    log.info("{} already present-- skipped.", outFile);
+                } else {
+                    P3Genome genome = P3Genome.Load(p3, genomeId, P3Genome.Details.FULL);
+                    if (genome == null)
+                        log.error("Genome {} not found.", genomeId);
+                    else {
+                        log.info("Writing {} to {}.", genome, outFile);
+                        genome.update(outFile);
+                        gCount++;
+                    }
                 }
             }
             log.info("All done. {} genomes output.", gCount);
