@@ -9,6 +9,7 @@ import org.theseed.utils.ICommand;
  *
  * vipr		create the genomes from ViPR download files
  * patric	download the genomes from the PATRIC website
+ * core		extract genomes from a SEED organism directory
  * ncbi		create a genome from NCBI download files
  * md5		compute MD5s from FASTA files
  *
@@ -36,6 +37,9 @@ public class App
             break;
         case "md5" :
             processor = new ChecksumProcessor();
+            break;
+        case "core" :
+            processor = new CoreProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
