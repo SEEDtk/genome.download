@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.theseed.genome.Genome;
@@ -26,6 +27,8 @@ import org.theseed.utils.BaseProcessor;
  * -h	display command-line usage
  * -v	write more detailed progress messages to the log
  *
+ * --clear	erase the output directory before processing
+ *
  * @author Bruce Parrello
  *
  */
@@ -37,6 +40,10 @@ public class CoreProcessor extends BaseProcessor {
 
     // COMMAND-LINE OPTIONS
 
+    /** erase the output before starting */
+    @Option(name = "--clear", usage = "if specified, the output directory will be erased before processing")
+    private boolean clearFlag;
+
     /** input SEED organism directory */
     @Argument(index = 0, metaVar = "FIGdisk/FIG/Data/Organisms", usage = "SEED organism directory", required = true)
     private File inDir;
@@ -47,6 +54,7 @@ public class CoreProcessor extends BaseProcessor {
 
     @Override
     protected void setDefaults() {
+        this.clearFlag = false;
     }
 
     @Override
@@ -58,6 +66,9 @@ public class CoreProcessor extends BaseProcessor {
         if (! this.outDir.isDirectory()) {
             log.info("Creating output directory {}.", this.outDir);
             FileUtils.forceMkdir(this.outDir);
+        } else if (this.clearFlag) {
+            log.info("Erasing output directory {}.", this.outDir);
+            FileUtils.cleanDirectory(this.outDir);
         }
         return true;
     }
