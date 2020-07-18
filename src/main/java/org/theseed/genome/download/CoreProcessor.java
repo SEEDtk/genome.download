@@ -44,6 +44,10 @@ public class CoreProcessor extends BaseProcessor {
     @Option(name = "--clear", usage = "if specified, the output directory will be erased before processing")
     private boolean clearFlag;
 
+    /** only download new genomes. */
+    @Option(name = "--missing", usage = "if specified, only new genomes will be downloaded")
+    private boolean missingOnly;
+
     /** input SEED organism directory */
     @Argument(index = 0, metaVar = "FIGdisk/FIG/Data/Organisms", usage = "SEED organism directory", required = true)
     private File inDir;
@@ -55,6 +59,7 @@ public class CoreProcessor extends BaseProcessor {
     @Override
     protected void setDefaults() {
         this.clearFlag = false;
+        this.missingOnly = false;
     }
 
     @Override
@@ -81,10 +86,14 @@ public class CoreProcessor extends BaseProcessor {
         OrganismDirectories orgDirs = new OrganismDirectories(this.inDir);
         log.info("{} genomes found in {}.", orgDirs.size(), this.inDir);
         for (String genomeId : orgDirs) {
-            Genome gto = new CoreGenome(p3, new File(this.inDir, genomeId));
-            File outFile = new File(this.outDir, gto.getId() + ".gto");
-            log.info("Writing {} to {}.", gto, outFile);
-            gto.update(outFile);
+            File outFile = new File(this.outDir, genomeId + ".gto");
+            if (this.missingOnly && outFile.exists())
+                log.info("Skipping {}: already exists.", genomeId);
+            else {
+                Genome gto = new CoreGenome(p3, new File(this.inDir, genomeId));
+                log.info("Writing {} to {}.", gto, outFile);
+                gto.update(outFile);
+            }
         }
         log.info("All done.");
     }
