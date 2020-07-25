@@ -2,7 +2,7 @@ package org.theseed.genome.download;
 
 import java.util.Arrays;
 
-import org.theseed.utils.ICommand;
+import org.theseed.utils.BaseProcessor;
 
 /**
  * Download genomes into genome directories.
@@ -20,7 +20,7 @@ public class App
         // Get the control parameter.
         String command = args[0];
         String[] newArgs = Arrays.copyOfRange(args, 1, args.length);
-        ICommand processor;
+        BaseProcessor processor;
         // Determine the command to process.
         switch (command) {
         case "fasta" :
@@ -40,6 +40,9 @@ public class App
             break;
         case "core" :
             processor = new CoreProcessor();
+            break;
+        case "subsystems" :
+            processor = new SubsystemProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
