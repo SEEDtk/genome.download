@@ -302,19 +302,8 @@ public class SubsystemProcessor extends BaseProcessor {
                     } else {
                         // Put this feature in the subsystem row.
                         subRow.addFeature(role, fid);
-                        // Get the protein family.
-                        String pgFam = feat.getPgfam();
-                        if (pgFam == null || pgFam.isEmpty()) {
-                            // No protein family, so we use the role ID.
-                            pgFam = this.projector.getRoleId(feat);
-                            this.roleCount++;
-                        }
-                        if (pgFam == null) {
-                            log.warn("Feature {} has no protein family or role: variant skipped for {}.", fid, subsystem);
-                            good = false;
-                        } else {
-                            variant.setCell(i, pgFam);
-                        }
+                        // Add this cell to the variant.
+                        variant.setCell(i, projector);
                     }
                 }
             }
