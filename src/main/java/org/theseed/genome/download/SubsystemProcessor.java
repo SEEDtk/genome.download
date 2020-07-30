@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.Argument;
@@ -21,9 +22,10 @@ import org.slf4j.LoggerFactory;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
-import org.theseed.genome.SubsystemRow;
 import org.theseed.io.LineReader;
 import org.theseed.io.MarkerFile;
+import org.theseed.proteins.Role;
+import org.theseed.proteins.RoleMap;
 import org.theseed.subsystems.SubsystemProjector;
 import org.theseed.subsystems.SubsystemSpec;
 import org.theseed.subsystems.VariantSpec;
@@ -66,6 +68,10 @@ import org.theseed.utils.BaseProcessor;
 public class SubsystemProcessor extends BaseProcessor {
 
     // FIELDS
+    /** heading line for the error output */
+    private static final String ERROR_STREAM_HEADER = "Subsystem\tGenome\tVariant\tColumn\tFeature\tExpected Role\tReplacements\tFound Role";
+    /** format string for the error output */
+    private static final String ERROR_STREAM_FORMAT = "%s\t%s\t%s\t%4d\t%s\t%s\t%s\t%s%n";
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(SubsystemProcessor.class);
     /** genome hash */
@@ -84,6 +90,8 @@ public class SubsystemProcessor extends BaseProcessor {
     private int badFeatureCount;
     /** number of bad variant instances */
     private int skipCount;
+    /** number of variants that could not be instantiated */
+    private int badVariantCount;
     /** output stream for bad-feature list */
     private PrintWriter errorStream;
 
@@ -165,11 +173,12 @@ public class SubsystemProcessor extends BaseProcessor {
         this.badFeatureCount = 0;
         this.dupCount = 0;
         this.skipCount = 0;
+        this.badVariantCount = 0;
         this.errorStream = null;
         if (this.errorFile != null) {
             this.errorStream = new PrintWriter(this.errorFile);
             log.info("Writing bad feature list to {}.", this.errorFile);
-            this.errorStream.println("Subsystem\tFeature\tRole");
+            this.errorStream.println(ERROR_STREAM_HEADER);
         }
         // We loop through the subsystems, memorizing the classifications.
         File[] subDirs = this.subsysDir.listFiles(new SubsystemFilter());
@@ -241,12 +250,19 @@ public class SubsystemProcessor extends BaseProcessor {
         // Output the subsystem projector.
         log.info("Saving subsystem definitions to {}.", this.projectorFile);
         projector.save(this.projectorFile);
-        log.info("All done. {} bad features, {} variant specs ({} duplicates, {} bad variant instances).",
-                this.badFeatureCount, projector.getVariants().size(), this.dupCount, this.skipCount);
+        log.info("All done. {} bad features, {} variant specs ({} duplicates, {} variant instances can be fixed, {} unfixable).",
+                this.badFeatureCount, projector.getVariants().size(), this.dupCount, this.skipCount,
+                this.badVariantCount);
     }
 
     private void processBatch() throws IOException {
         log.info("Processing batch of {} genomes.", this.genomeMap.size());
+        // Create role maps for all the genomes.
+        Map<String, Map<String, Set<String>>> gRoleMaps = new HashMap<>(this.batchSize);
+        for (Map.Entry<String, Genome> genomeEntry : this.genomeMap.entrySet()) {
+            Map<String, Set<String>> roleMap = this.projector.computeRoleMap(genomeEntry.getValue());
+            gRoleMaps.put(genomeEntry.getKey(), roleMap);
+        }
         // Loop through the subsystems, finding the role bindings.
         for (Map.Entry<File, SubsystemSpec> subEntry : this.subDirMap.entrySet()) {
             File subDir = subEntry.getKey();
@@ -264,7 +280,7 @@ public class SubsystemProcessor extends BaseProcessor {
                         Genome genome = this.genomeMap.get(genomeId);
                         if (genome != null) {
                             // Now we have an active row for a genome of interest.
-                            this.createSubsystem(genome, subsystem, fields);
+                            this.createSubsystem(genome, gRoleMaps.get(genomeId), subsystem, fields);
                         }
                     }
                 }
@@ -285,56 +301,88 @@ public class SubsystemProcessor extends BaseProcessor {
      * Create the subsystem row in the specified genome for the current subsystem.
      *
      * @param genome	genome implementing the subsystem
+     * @param roleMap 	role map for the genome
      * @param subsystem	subsystem specification
      * @param fields	array of fields in the spreadsheet row
      */
-    private void createSubsystem(Genome genome, SubsystemSpec subsystem, String[] fields) {
+    private void createSubsystem(Genome genome, Map<String, Set<String>> roleMap, SubsystemSpec subsystem, String[] fields) {
+        // This will track the problematic roles.
+        boolean badRoles = false;
+        // This will denote we had to change features.
+        boolean badVariant = false;
+        // This is used to verify subsystem roles.
+        RoleMap usefulRoles = projector.usefulRoles();
         // Create the subsystem itself.  Note that field 1 is the variant code.
         String variantCode = fields[1];
-        SubsystemRow subRow = new SubsystemRow(genome, subsystem.getName());
-        // Store the classifications in the subsystem row.
-        subRow.setClassifications(subsystem.getClassifications());
-        subRow.setVariantCode(variantCode);
         // Create a variant spec.
         VariantSpec variant = new VariantSpec(subsystem, variantCode);
-        // Denote that so far this variant is good.
-        boolean good = true;
         // This will be the feature ID prefix for all features.  Some will also need "peg".
         String prefix = "fig|" + genome.getId() + ".";
         // Now process the roles.
         List<String> roles = subsystem.getRoles();
         for (int i = 0; i < roles.size(); i++) {
             // Get the pegs for this role.
-            String role = roles.get(i);
-            subRow.addRole(role);
             if (i + 2 < fields.length) {
                 String[] pegs = StringUtils.split(fields[i + 2], ',');
                 for (String peg : pegs) {
                     String fid = (peg.contains(".") ? prefix + peg : prefix + "peg." + peg);
                     // Look for the feature.
                     Feature feat = genome.getFeature(fid);
-                    if (feat == null) {
-                        log.warn("Invalid feature ID {} found in subsystem {}.", fid, subsystem);
-                        this.badFeatureCount++;
-                        good = false;
-                        if (this.errorStream != null)
-                            this.errorStream.format("%s\t%s\t%s%n", subsystem.getName(), fid, subsystem.getRole(i));
-                    } else {
-                        // Put this feature in the subsystem row.
-                        subRow.addFeature(role, fid);
-                        // Add this cell to the variant.
+                    String roleDesc = roles.get(i);
+                    if (feat != null && feat.getUsefulRoles(usefulRoles).stream().anyMatch(r -> r.matches(roleDesc))) {
+                        // Here we are good.  Add this cell to the variant.
                         variant.setCell(i, projector);
+                    } else {
+                        // Here the subsystem refers to a feature that does not exist or has the wrong role.
+                        this.badFeatureCount++;
+                        Role role = usefulRoles.findOrInsert(roleDesc);
+                        String reason = (feat == null ? "not found for" : "does not contain");
+                        // See if there is a substitute.
+                        if (roleMap.containsKey(role.getId())) {
+                            // Features exist that contains the proper role.
+                            if (log.isWarnEnabled()) {
+                                String fids = StringUtils.join(roleMap.get(role.getId()), ", ");
+                                log.warn("Feature ID {} {} role \"{}\" in subsystem {}: using {}.",
+                                        fid, reason, roleDesc, subsystem, fids);
+                                if (this.errorStream != null)
+                                    this.errorStream.format(ERROR_STREAM_FORMAT, subsystem.getName(), genome.getId(), variantCode,
+                                            i, fid, roleDesc, fids, "");
+                            }
+                            badVariant = true;
+                        } else {
+                            badRoles = true;
+                            log.warn("Feature ID {} {} role \"{}\" in subsystem {}. No substitute found.",
+                                    fid, reason, roleDesc, subsystem);
+                            if (this.errorStream != null) {
+                                String foundRole = (feat == null ? "" : feat.getFunction());
+                                this.errorStream.format(ERROR_STREAM_FORMAT, subsystem.getName(), genome.getId(), variantCode,
+                                        i, fid, roleDesc, "", foundRole);
+                            }
+                        }
                     }
                 }
             }
         }
-        if (! good) this.skipCount++;
+        if (badRoles) {
+            this.badVariantCount++;
+        } else if (badVariant) {
+            this.skipCount++;
+        }
         // The roles are all processed for this subsystem row.  Save the variant.
         boolean isNew = this.projector.addVariant(variant);
         if (! isNew)
             this.dupCount++;
         else
             log.debug("Added new {}.", variant);
+        // Attempt to project the variant onto the genome.  We can do this if the genome had all
+        // the features in the variant or if the variant matches with other features in the genome.
+        if (badRoles) {
+            log.error("Could not install {} in {}.", subsystem, genome);
+        } else {
+            variant.instantiate(genome, roleMap);
+            log.info("{} installed in {}.", subsystem, genome);
+        }
+
     }
 
     /**
