@@ -8,6 +8,7 @@ import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,9 @@ import org.theseed.utils.BaseProcessor;
  * -b	batch size for loading genomes (default 100)
  * -o	output file for subsystem definitions
  *
- * @author Bruce Parrello
+ * --errors		output file for bad features
+ *
+ *  @author Bruce Parrello
  *
  */
 public class SubsystemProcessor extends BaseProcessor {
@@ -79,10 +82,10 @@ public class SubsystemProcessor extends BaseProcessor {
     private int dupCount;
     /** number of missing features found */
     private int badFeatureCount;
-    /** number of variant instances skipped */
+    /** number of bad variant instances */
     private int skipCount;
-    /** number of features without protein families */
-    private int roleCount;
+    /** output stream for bad-feature list */
+    private PrintWriter errorStream;
 
     // COMMAND-LINE OPTIONS
 
@@ -91,8 +94,13 @@ public class SubsystemProcessor extends BaseProcessor {
     private int batchSize;
 
     /** subsystem projector output file */
-    @Option(name = "-o", aliases = { "--projector" }, metaVar = "variants.tbl", usage = "output file for subsystem projection data")
+    @Option(name = "-o", aliases = { "--projector" }, metaVar = "variants.tbl",
+            usage = "optional output file for subsystem projection data")
     private File projectorFile;
+
+    /** bad-feature output file */
+    @Option(name = "--errors", metaVar = "errorFile.tbl", usage = "optional output file for bad feature list")
+    private File errorFile;
 
     /** genome directory */
     @Argument(index = 0, metaVar = "gtoDir", usage = "input genome directory", required = true)
@@ -106,6 +114,7 @@ public class SubsystemProcessor extends BaseProcessor {
     protected void setDefaults() {
         this.batchSize = 100;
         this.projectorFile = null;
+        this.errorFile = null;
     }
 
     @Override
@@ -156,7 +165,12 @@ public class SubsystemProcessor extends BaseProcessor {
         this.badFeatureCount = 0;
         this.dupCount = 0;
         this.skipCount = 0;
-        this.roleCount = 0;
+        this.errorStream = null;
+        if (this.errorFile != null) {
+            this.errorStream = new PrintWriter(this.errorFile);
+            log.info("Writing bad feature list to {}.", this.errorFile);
+            this.errorStream.println("Subsystem\tFeature\tRole");
+        }
         // We loop through the subsystems, memorizing the classifications.
         File[] subDirs = this.subsysDir.listFiles(new SubsystemFilter());
         log.info("{} subsystem directories found with spreadsheets.", subDirs.length);
@@ -221,11 +235,14 @@ public class SubsystemProcessor extends BaseProcessor {
         }
         // Process the residual batch.
         this.processBatch();
+        // Close the error stream.
+        if (this.errorStream != null)
+            this.errorStream.close();
         // Output the subsystem projector.
         log.info("Saving subsystem definitions to {}.", this.projectorFile);
         projector.save(this.projectorFile);
-        log.info("All done. {} bad features, {} without protein families, {} variant specs ({} duplicates, {} skipped).",
-                this.badFeatureCount, this.roleCount, projector.getVariants().size(), this.dupCount, this.skipCount);
+        log.info("All done. {} bad features, {} variant specs ({} duplicates, {} bad variant instances).",
+                this.badFeatureCount, projector.getVariants().size(), this.dupCount, this.skipCount);
     }
 
     private void processBatch() throws IOException {
@@ -273,14 +290,15 @@ public class SubsystemProcessor extends BaseProcessor {
      */
     private void createSubsystem(Genome genome, SubsystemSpec subsystem, String[] fields) {
         // Create the subsystem itself.  Note that field 1 is the variant code.
+        String variantCode = fields[1];
         SubsystemRow subRow = new SubsystemRow(genome, subsystem.getName());
-        subRow.setVariantCode(fields[1]);
-        // Create a variant spec.
-        VariantSpec variant = new VariantSpec(subsystem, fields[1]);
-        // Denote that so far this variant is good.
-        boolean good = true;
         // Store the classifications in the subsystem row.
         subRow.setClassifications(subsystem.getClassifications());
+        subRow.setVariantCode(variantCode);
+        // Create a variant spec.
+        VariantSpec variant = new VariantSpec(subsystem, variantCode);
+        // Denote that so far this variant is good.
+        boolean good = true;
         // This will be the feature ID prefix for all features.  Some will also need "peg".
         String prefix = "fig|" + genome.getId() + ".";
         // Now process the roles.
@@ -299,6 +317,8 @@ public class SubsystemProcessor extends BaseProcessor {
                         log.warn("Invalid feature ID {} found in subsystem {}.", fid, subsystem);
                         this.badFeatureCount++;
                         good = false;
+                        if (this.errorStream != null)
+                            this.errorStream.format("%s\t%s\t%s%n", subsystem.getName(), fid, subsystem.getRole(i));
                     } else {
                         // Put this feature in the subsystem row.
                         subRow.addFeature(role, fid);
@@ -308,17 +328,13 @@ public class SubsystemProcessor extends BaseProcessor {
                 }
             }
         }
-        // Roles processed for this subsystem row.  If we have a valid variant, save it.
-        if (good) {
-            boolean isNew = this.projector.addVariant(variant);
-            if (! isNew)
-                this.dupCount++;
-            else
-                log.debug("Added new {}.", variant);
-        } else {
-            this.skipCount++;
-            log.info("Skipped {} in {}.", variant, genome);
-        }
+        if (! good) this.skipCount++;
+        // The roles are all processed for this subsystem row.  Save the variant.
+        boolean isNew = this.projector.addVariant(variant);
+        if (! isNew)
+            this.dupCount++;
+        else
+            log.debug("Added new {}.", variant);
     }
 
     /**

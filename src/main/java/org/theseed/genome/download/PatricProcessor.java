@@ -13,6 +13,7 @@ import org.kohsuke.args4j.Option;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.p3api.Connection;
 import org.theseed.p3api.P3Genome;
+import org.theseed.p3api.P3SubsystemProjector;
 import org.theseed.subsystems.SubsystemProjector;
 import org.theseed.utils.BaseProcessor;
 import org.theseed.utils.ICommand;
@@ -36,6 +37,7 @@ import org.theseed.utils.ICommand;
  * --clear		erase the output directory before proceeding
  * --missing	only download genomes not already present
  * --projector	if specified, the name of a subsystem projector file for computing the subsystems
+ * --subsystems	if specified, subsystems will be downloaded from PATRIC
  *
  * @author Bruce Parrello
  *
@@ -49,6 +51,8 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
     private int colIdx;
     /** subsystem projector */
     private SubsystemProjector projector;
+    /** connection to PATRIC */
+    private Connection p3;
 
     // COMMAND-LINE OPTIONS
 
@@ -70,6 +74,10 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
     @Option(name = "--projector", metaVar = "projector.txt", usage = "optional projector file for computing subsystems")
     private File projectorFile;
 
+    /** project subsystems from the PATRIC database */
+    @Option(name = "--subsystems", usage = "project subsystems from PATRIC", forbids = { "--projector" })
+    private boolean subsystemFlag;
+
     /** name of the output directory */
     @Argument(index = 0, metaVar = "outDir", usage = "name of the output directory", required = true)
     private File outDir;
@@ -80,6 +88,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
         this.inFile = null;
         this.clearOutput = false;
         this.missingOnly = false;
+        this.subsystemFlag = false;
         this.projectorFile = null;
     }
 
@@ -108,11 +117,16 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
             log.info("Reading genome IDs from {}.", this.inFile);
             this.inStream = new TabbedLineReader(this.inFile);
         }
+        // Connect to PATRIC.
+        this.p3 = new Connection();
         // Set up the subsystem projector.
         this.projector = null;
         if (this.projectorFile != null) {
             log.info("Loading subsystem projector from {}.", this.projectorFile);
             this.projector = SubsystemProjector.Load(this.projectorFile);
+        } else if (this.subsystemFlag) {
+            log.info("Subsystems will be projected from PATRIC data.");
+            this.projector = new P3SubsystemProjector(p3);
         }
         // Find the input column.
         this.colIdx = this.inStream.findField(this.column);
@@ -121,8 +135,6 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
 
     @Override
     public void runCommand() throws Exception {
-        // Connect to PATRIC.
-        Connection p3 = new Connection();
         try {
             // Count the genomes written.
             int gCount = 0;
@@ -134,7 +146,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
                 if (this.missingOnly && outFile.exists()) {
                     log.info("{} already present-- skipped.", outFile);
                 } else {
-                    P3Genome genome = P3Genome.Load(p3, genomeId, P3Genome.Details.FULL);
+                    P3Genome genome = P3Genome.Load(this.p3, genomeId, P3Genome.Details.FULL);
                     if (genome == null)
                         log.error("Genome {} not found.", genomeId);
                     else {
