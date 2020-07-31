@@ -6,9 +6,8 @@ package org.theseed.genome.download;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,9 +25,12 @@ import org.theseed.io.LineReader;
 import org.theseed.io.MarkerFile;
 import org.theseed.proteins.Role;
 import org.theseed.proteins.RoleMap;
+import org.theseed.subsystems.CountingSpreadsheetAnalyzer;
+import org.theseed.subsystems.ProjectionSpreadsheetAnalyzer;
+import org.theseed.subsystems.SpreadsheetAnalyzer;
 import org.theseed.subsystems.SubsystemProjector;
 import org.theseed.subsystems.SubsystemSpec;
-import org.theseed.subsystems.VariantSpec;
+import org.theseed.subsystems.TrackingSpreadsheetAnalyzer;
 import org.theseed.subsystems.VariantId;
 import org.theseed.utils.BaseProcessor;
 
@@ -60,7 +62,8 @@ import org.theseed.utils.BaseProcessor;
  * -b	batch size for loading genomes (default 100)
  * -o	output file for subsystem definitions
  *
- * --errors		output file for bad features
+ * --errors			output file for bad features
+ * --roleCounts		output file for role counts
  *
  *  @author Bruce Parrello
  *
@@ -68,10 +71,6 @@ import org.theseed.utils.BaseProcessor;
 public class SubsystemProcessor extends BaseProcessor {
 
     // FIELDS
-    /** heading line for the error output */
-    private static final String ERROR_STREAM_HEADER = "Subsystem\tGenome\tVariant\tColumn\tFeature\tExpected Role\tReplacements\tFound Role";
-    /** format string for the error output */
-    private static final String ERROR_STREAM_FORMAT = "%s\t%s\t%s\t%4d\t%s\t%s\t%s\t%s%n";
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(SubsystemProcessor.class);
     /** genome hash */
@@ -84,16 +83,8 @@ public class SubsystemProcessor extends BaseProcessor {
     private SubsystemProjector projector;
     /** map of subsystem directories to subsystem specifiers */
     private Map<File, SubsystemSpec> subDirMap;
-    /** number of duplicate variant specifications found */
-    private int dupCount;
-    /** number of missing features found */
-    private int badFeatureCount;
-    /** number of bad variant instances */
-    private int skipCount;
-    /** number of variants that could not be instantiated */
-    private int badVariantCount;
-    /** output stream for bad-feature list */
-    private PrintWriter errorStream;
+    /** list of analyzers to run */
+    private List<SpreadsheetAnalyzer> analyzers;
 
     // COMMAND-LINE OPTIONS
 
@@ -110,6 +101,9 @@ public class SubsystemProcessor extends BaseProcessor {
     @Option(name = "--errors", metaVar = "errorFile.tbl", usage = "optional output file for bad feature list")
     private File errorFile;
 
+    @Option(name = "--roleCounts", metaVar = "roleErrors.tbl", usage = "optional output file for bad-role counts")
+    private File roleCountFile;
+
     /** genome directory */
     @Argument(index = 0, metaVar = "gtoDir", usage = "input genome directory", required = true)
     private File gtoDir;
@@ -123,6 +117,8 @@ public class SubsystemProcessor extends BaseProcessor {
         this.batchSize = 100;
         this.projectorFile = null;
         this.errorFile = null;
+        this.roleCountFile = null;
+        this.analyzers = new ArrayList<SpreadsheetAnalyzer>(10);
     }
 
     @Override
@@ -142,11 +138,12 @@ public class SubsystemProcessor extends BaseProcessor {
         // Create the subsystem projector and the directory map.
         this.projector = new SubsystemProjector();
         this.subDirMap = new HashMap<File, SubsystemSpec>();
-        // If we have a projector output file, verify we can write to it.
-        if (this.projectorFile != null) {
-            FileOutputStream testStream = new FileOutputStream(this.projectorFile);
-            testStream.close();
-        }
+        // Create the analyzers.
+        this.analyzers.add(new ProjectionSpreadsheetAnalyzer(this.projector, this.projectorFile));
+        if (this.errorFile != null)
+            this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.projector, this.errorFile));
+        if (this.roleCountFile != null)
+            this.analyzers.add(new CountingSpreadsheetAnalyzer(this.projector, this.roleCountFile));
         return true;
     }
 
@@ -169,17 +166,6 @@ public class SubsystemProcessor extends BaseProcessor {
 
     @Override
     protected void runCommand() throws Exception {
-        // Initialize the counts.
-        this.badFeatureCount = 0;
-        this.dupCount = 0;
-        this.skipCount = 0;
-        this.badVariantCount = 0;
-        this.errorStream = null;
-        if (this.errorFile != null) {
-            this.errorStream = new PrintWriter(this.errorFile);
-            log.info("Writing bad feature list to {}.", this.errorFile);
-            this.errorStream.println(ERROR_STREAM_HEADER);
-        }
         // We loop through the subsystems, memorizing the classifications.
         File[] subDirs = this.subsysDir.listFiles(new SubsystemFilter());
         log.info("{} subsystem directories found with spreadsheets.", subDirs.length);
@@ -244,15 +230,9 @@ public class SubsystemProcessor extends BaseProcessor {
         }
         // Process the residual batch.
         this.processBatch();
-        // Close the error stream.
-        if (this.errorStream != null)
-            this.errorStream.close();
-        // Output the subsystem projector.
-        log.info("Saving subsystem definitions to {}.", this.projectorFile);
-        projector.save(this.projectorFile);
-        log.info("All done. {} bad features, {} variant specs ({} duplicates, {} variant instances can be fixed, {} unfixable).",
-                this.badFeatureCount, projector.getVariants().size(), this.dupCount, this.skipCount,
-                this.badVariantCount);
+        // Terminate the analyzers.
+        for (SpreadsheetAnalyzer analyzer : this.analyzers)
+            analyzer.close();
     }
 
     private void processBatch() throws IOException {
@@ -306,16 +286,11 @@ public class SubsystemProcessor extends BaseProcessor {
      * @param fields	array of fields in the spreadsheet row
      */
     private void createSubsystem(Genome genome, Map<String, Set<String>> roleMap, SubsystemSpec subsystem, String[] fields) {
-        // This will track the problematic roles.
-        boolean badRoles = false;
-        // This will denote we had to change features.
-        boolean badVariant = false;
         // This is used to verify subsystem roles.
         RoleMap usefulRoles = projector.usefulRoles();
-        // Create the subsystem itself.  Note that field 1 is the variant code.
-        String variantCode = fields[1];
-        // Create a variant spec.
-        VariantSpec variant = new VariantSpec(subsystem, variantCode);
+        // Initialize for processing this row.  Note that field 1 is the variant code.
+        for (SpreadsheetAnalyzer analyzer : this.analyzers)
+            analyzer.openRow(genome, roleMap, subsystem, fields[1]);
         // This will be the feature ID prefix for all features.  Some will also need "peg".
         String prefix = "fig|" + genome.getId() + ".";
         // Now process the roles.
@@ -331,58 +306,32 @@ public class SubsystemProcessor extends BaseProcessor {
                     String roleDesc = roles.get(i);
                     if (feat != null && feat.getUsefulRoles(usefulRoles).stream().anyMatch(r -> r.matches(roleDesc))) {
                         // Here we are good.  Add this cell to the variant.
-                        variant.setCell(i, projector);
+                        for (SpreadsheetAnalyzer analyzer : this.analyzers)
+                            analyzer.goodCell(i, feat);
                     } else {
                         // Here the subsystem refers to a feature that does not exist or has the wrong role.
-                        this.badFeatureCount++;
                         Role role = usefulRoles.findOrInsert(roleDesc);
-                        String reason = (feat == null ? "not found for" : "does not contain");
                         // See if there is a substitute.
                         if (roleMap.containsKey(role.getId())) {
-                            // Features exist that contains the proper role.
-                            if (log.isWarnEnabled()) {
-                                String fids = StringUtils.join(roleMap.get(role.getId()), ", ");
-                                log.warn("Feature ID {} {} role \"{}\" in subsystem {}: using {}.",
-                                        fid, reason, roleDesc, subsystem, fids);
-                                if (this.errorStream != null)
-                                    this.errorStream.format(ERROR_STREAM_FORMAT, subsystem.getName(), genome.getId(), variantCode,
-                                            i, fid, roleDesc, fids, "");
-                            }
-                            badVariant = true;
+                            // Features exist that contain the proper role.
+                            for (SpreadsheetAnalyzer analyzer : this.analyzers)
+                                analyzer.badCell(i, fid, roleDesc, roleMap.get(role.getId()));
                         } else {
-                            badRoles = true;
-                            log.warn("Feature ID {} {} role \"{}\" in subsystem {}. No substitute found.",
-                                    fid, reason, roleDesc, subsystem);
-                            if (this.errorStream != null) {
-                                String foundRole = (feat == null ? "" : feat.getFunction());
-                                this.errorStream.format(ERROR_STREAM_FORMAT, subsystem.getName(), genome.getId(), variantCode,
-                                        i, fid, roleDesc, "", foundRole);
+                            // No feature exists that contains the proper role.
+                            for (SpreadsheetAnalyzer analyzer : this.analyzers) {
+                                if (feat == null)
+                                    analyzer.badCell(i, fid, roleDesc);
+                                else
+                                    analyzer.badCell(i, feat, roleDesc);
                             }
                         }
                     }
                 }
             }
         }
-        if (badRoles) {
-            this.badVariantCount++;
-        } else if (badVariant) {
-            this.skipCount++;
-        }
-        // The roles are all processed for this subsystem row.  Save the variant.
-        boolean isNew = this.projector.addVariant(variant);
-        if (! isNew)
-            this.dupCount++;
-        else
-            log.debug("Added new {}.", variant);
-        // Attempt to project the variant onto the genome.  We can do this if the genome had all
-        // the features in the variant or if the variant matches with other features in the genome.
-        if (badRoles) {
-            log.error("Could not install {} in {}.", subsystem, genome);
-        } else {
-            variant.instantiate(genome, roleMap);
-            log.info("{} installed in {}.", subsystem, genome);
-        }
-
+        // Finish processing for this role.
+        for (SpreadsheetAnalyzer analyzer : this.analyzers)
+            analyzer.closeRow();
     }
 
     /**
