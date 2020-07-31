@@ -332,6 +332,7 @@ public class SubsystemProcessor extends BaseProcessor {
         // Finish processing for this role.
         for (SpreadsheetAnalyzer analyzer : this.analyzers)
             analyzer.closeRow();
+        log.info("Subsystem processing complete.");
     }
 
     /**

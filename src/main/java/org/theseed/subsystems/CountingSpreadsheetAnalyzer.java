@@ -83,7 +83,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     /** heading columns for report */
     private final String TRACKING_HEADER = "Subsystem\tCell_Index\tRole\tCount";
     /** format for report lines */
-    private final String TRACKING_FORMAT = "%s\t%%d%c\t%s\t%d%n";
+    private final String TRACKING_FORMAT = "%s\t%d%c\t%s\t%d%n";
 
     /**
      * Set up to produce the role-tracking report.
@@ -138,7 +138,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     @Override
     protected void recordIncorrectRole(int idx, Feature feat, String roleDesc) {
         // This is the genuine wrong-role case.
-        this.currentCounts[idx].countBad(roleDesc);
+        this.currentCounts[idx].countBad(feat.getFunction());
     }
 
     @Override

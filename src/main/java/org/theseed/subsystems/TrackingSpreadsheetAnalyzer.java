@@ -74,8 +74,8 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
      * @param roleFound		actual role description
      */
     private void writeRow(int idx, String fid, String roleDesc, String fids, String roleFound) {
-        this.outStream.format(ERROR_STREAM_FORMAT, this.getSubsystem().getName(), this.varCode,
-                idx, fid, roleDesc, fids, roleFound);
+        this.outStream.format(ERROR_STREAM_FORMAT, this.getSubsystem().getName(),
+                this.getGenome().getId(), this.varCode, idx, fid, roleDesc, fids, roleFound);
         this.errorCount++;
     }
 
