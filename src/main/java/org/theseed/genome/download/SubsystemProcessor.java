@@ -23,8 +23,7 @@ import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
 import org.theseed.io.LineReader;
 import org.theseed.io.MarkerFile;
-import org.theseed.proteins.Role;
-import org.theseed.proteins.RoleMap;
+import org.theseed.proteins.RoleSet;
 import org.theseed.subsystems.CountingSpreadsheetAnalyzer;
 import org.theseed.subsystems.ProjectionSpreadsheetAnalyzer;
 import org.theseed.subsystems.SpreadsheetAnalyzer;
@@ -286,8 +285,6 @@ public class SubsystemProcessor extends BaseProcessor {
      * @param fields	array of fields in the spreadsheet row
      */
     private void createSubsystem(Genome genome, Map<String, Set<String>> roleMap, SubsystemSpec subsystem, String[] fields) {
-        // This is used to verify subsystem roles.
-        RoleMap usefulRoles = projector.usefulRoles();
         // Initialize for processing this row.  Note that field 1 is the variant code.
         for (SpreadsheetAnalyzer analyzer : this.analyzers)
             analyzer.openRow(genome, roleMap, subsystem, fields[1]);
@@ -296,33 +293,37 @@ public class SubsystemProcessor extends BaseProcessor {
         // Now process the roles.
         List<String> roles = subsystem.getRoles();
         for (int i = 0; i < roles.size(); i++) {
+            // Get the roleset for this role.
+            String function = roles.get(i);
+            RoleSet cRoles = projector.getRoleIds(function);
             // Get the pegs for this role.
             if (i + 2 < fields.length) {
                 String[] pegs = StringUtils.split(fields[i + 2], ',');
                 for (String peg : pegs) {
                     String fid = (peg.contains(".") ? prefix + peg : prefix + "peg." + peg);
-                    // Look for the feature.
+                    // Look for the feature.  We need to make sure it exists and implements the
+                    // cell's roles.
                     Feature feat = genome.getFeature(fid);
-                    String roleDesc = roles.get(i);
-                    if (feat != null && feat.getUsefulRoles(usefulRoles).stream().anyMatch(r -> r.matches(roleDesc))) {
+                    RoleSet fRoles = projector.getRoleIds(feat);
+                    if (fRoles.contains(cRoles)) {
                         // Here we are good.  Add this cell to the variant.
                         for (SpreadsheetAnalyzer analyzer : this.analyzers)
                             analyzer.goodCell(i, feat);
                     } else {
                         // Here the subsystem refers to a feature that does not exist or has the wrong role.
-                        Role role = usefulRoles.findOrInsert(roleDesc);
                         // See if there is a substitute.
-                        if (roleMap.containsKey(role.getId())) {
+                        Set<String> fids = cRoles.featureSet(roleMap);
+                        if (fids != null) {
                             // Features exist that contain the proper role.
                             for (SpreadsheetAnalyzer analyzer : this.analyzers)
-                                analyzer.badCell(i, fid, roleDesc, roleMap.get(role.getId()));
+                                analyzer.badCell(i, fid, function, fids);
                         } else {
                             // No feature exists that contains the proper role.
                             for (SpreadsheetAnalyzer analyzer : this.analyzers) {
                                 if (feat == null)
-                                    analyzer.badCell(i, fid, roleDesc);
+                                    analyzer.badCell(i, fid, function);
                                 else
-                                    analyzer.badCell(i, feat, roleDesc);
+                                    analyzer.badCell(i, feat, function);
                             }
                         }
                     }

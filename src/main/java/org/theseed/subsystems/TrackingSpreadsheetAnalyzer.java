@@ -31,6 +31,8 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     private int totalErrors;
     /** number of variants with errors */
     private int badVariants;
+    /** number of missing features without replacements */
+    private int missingCount;
     /** heading line for the output */
     private static final String ERROR_STREAM_HEADER = "Subsystem\tGenome\tVariant\tColumn\tFeature\tExpected Role\tReplacements";
     /** format string for the output */
@@ -53,6 +55,7 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         this.outStream.println(ERROR_STREAM_HEADER);
         this.totalErrors = 0;
         this.badVariants = 0;
+        this.missingCount = 0;
     }
 
     @Override
@@ -68,6 +71,7 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     @Override
     protected void recordMissingFeature(int idx, String fid, String roleDesc) {
         this.writeRow(idx, fid, roleDesc, "");
+        this.missingCount++;
     }
 
     /**
@@ -109,6 +113,7 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     @Override
     protected void terminateAll() {
         log.info("{} incorrect features found in {} variants.", this.totalErrors, this.badVariants);
+        log.info("{} missing features without replacements.", this.missingCount);
         this.outStream.close();
     }
 
