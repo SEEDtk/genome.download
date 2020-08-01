@@ -27,10 +27,14 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     private String varCode;
     /** number of errors in the current row */
     private int errorCount;
+    /** total number of errors */
+    private int totalErrors;
+    /** number of variants with errors */
+    private int badVariants;
     /** heading line for the output */
-    private static final String ERROR_STREAM_HEADER = "Subsystem\tGenome\tVariant\tColumn\tFeature\tExpected Role\tReplacements\tFound Role";
+    private static final String ERROR_STREAM_HEADER = "Subsystem\tGenome\tVariant\tColumn\tFeature\tExpected Role\tReplacements";
     /** format string for the output */
-    private static final String ERROR_STREAM_FORMAT = "%s\t%s\t%s\t%4d\t%s\t%s\t%s\t%s%n";
+    private static final String ERROR_STREAM_FORMAT = "%s\t%s\t%s\t%4d\t%s\t%s\t%s%n";
 
     /**
      * Set up to produce the tracking report.
@@ -47,6 +51,8 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
             throw new UncheckedIOException(e);
         }
         this.outStream.println(ERROR_STREAM_HEADER);
+        this.totalErrors = 0;
+        this.badVariants = 0;
     }
 
     @Override
@@ -61,7 +67,7 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
 
     @Override
     protected void recordMissingFeature(int idx, String fid, String roleDesc) {
-        this.writeRow(idx, fid, roleDesc, "", "");
+        this.writeRow(idx, fid, roleDesc, "");
     }
 
     /**
@@ -73,32 +79,36 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
      * @param fids			IDs of the correct features for the cell
      * @param roleFound		actual role description
      */
-    private void writeRow(int idx, String fid, String roleDesc, String fids, String roleFound) {
+    private void writeRow(int idx, String fid, String roleDesc, String fids) {
         this.outStream.format(ERROR_STREAM_FORMAT, this.getSubsystem().getName(),
-                this.getGenome().getId(), this.varCode, idx, fid, roleDesc, fids, roleFound);
+                this.getGenome().getId(), this.varCode, idx, fid, roleDesc, fids);
         this.errorCount++;
     }
 
     @Override
     protected void recordReplacementFeatures(int idx, String fid, String roleDesc, Set<String> fids) {
         String fidsList = StringUtils.join(fids, ", ");
-        this.writeRow(idx, fid, roleDesc, fidsList, "");
+        this.writeRow(idx, fid, roleDesc, fidsList);
     }
 
     @Override
     protected void recordIncorrectRole(int idx, Feature feat, String roleDesc) {
-        this.writeRow(idx, feat.getId(), roleDesc, "", feat.getFunction());
+        this.errorCount++;
     }
 
     @Override
     protected void terminateRow() {
-        if (this.errorCount > 0)
+        if (this.errorCount > 0) {
             log.info("{} errors found in {} for subsystem {}.", this.errorCount, this.getGenome(),
                     this.getSubsystem());
+            this.totalErrors += errorCount;
+            this.badVariants++;
+        }
     }
 
     @Override
     protected void terminateAll() {
+        log.info("{} incorrect features found in {} variants.", this.totalErrors, this.badVariants);
         this.outStream.close();
     }
 

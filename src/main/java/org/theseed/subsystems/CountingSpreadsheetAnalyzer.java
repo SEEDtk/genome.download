@@ -80,6 +80,10 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     private Map<SubsystemSpec, CellSpec[]> countingMap;
     /** currently-active cell-specification array */
     private CellSpec[] currentCounts;
+    /** number of variants with incorrect roles */
+    private int badVariants;
+    /** TRUE if the current variant has incorrect roles */
+    private boolean badRoles;
     /** heading columns for report */
     private final String TRACKING_HEADER = "Subsystem\tCell_Index\tRole\tCount";
     /** format for report lines */
@@ -93,6 +97,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
      */
     public CountingSpreadsheetAnalyzer(SubsystemProjector projector, File outFile) {
         super(projector);
+        this.badVariants = 0;
         // Set up the output file.
         log.info("Role counts will be output to {}.", outFile);
         try {
@@ -107,6 +112,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
 
     @Override
     protected void initializeRow(String variantCode) {
+        this.badRoles = false;
         // Verify that we have the cell-specification array for the current subsystem.
         SubsystemSpec subsystem = this.getSubsystem();
         if (! this.countingMap.containsKey(subsystem)) {
@@ -139,21 +145,28 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     protected void recordIncorrectRole(int idx, Feature feat, String roleDesc) {
         // This is the genuine wrong-role case.
         this.currentCounts[idx].countBad(feat.getFunction());
+        this.badRoles = true;
     }
 
     @Override
     protected void terminateRow() {
+        if (this.badRoles) this.badVariants++;
     }
 
     @Override
     protected void terminateAll() {
+        int badSubsystems = 0;
+        int badColumns = 0;
         // Now we have accumulated all the counts and we spool them off by subsystem.
         for (Map.Entry<SubsystemSpec, CellSpec[]> subEntry : this.countingMap.entrySet()) {
             SubsystemSpec subsystem = subEntry.getKey();
+            boolean badSubsystem = false;
             CellSpec[] subCounts = subEntry.getValue();
             for (int i = 0; i < subCounts.length; i++)
                 if (subCounts[i].isReportable()) {
                     // Here we have a subsystem cell with data we want to report.
+                    badSubsystem = true;
+                    badColumns++;
                     // First we do the good role.
                     this.outStream.format(TRACKING_FORMAT, subsystem.getName(), i, '*',
                             subsystem.getRole(i), subCounts[i].goodCount);
@@ -162,7 +175,10 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
                         this.outStream.format(TRACKING_FORMAT, subsystem.getName(), i, ' ',
                                 count.getKey(), count.getCount());
                 }
+            if (badSubsystem) badSubsystems++;
         }
+        log.info("{} variants with incorrect roles found in {} subsystems.", this.badVariants, badSubsystems);
+        log.info("{} subsystem columns require review.", badColumns);
         // Close the output file.
         this.outStream.close();
     }
