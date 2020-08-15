@@ -4,7 +4,6 @@
 package org.theseed.genome.download;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,6 +30,7 @@ import org.theseed.subsystems.SubsystemProjector;
 import org.theseed.subsystems.SubsystemSpec;
 import org.theseed.subsystems.TrackingSpreadsheetAnalyzer;
 import org.theseed.subsystems.VariantId;
+import org.theseed.subsystems.SubsystemFilter;
 import org.theseed.utils.BaseProcessor;
 
 /**
@@ -144,23 +144,6 @@ public class SubsystemProcessor extends BaseProcessor {
         if (this.roleCountFile != null)
             this.analyzers.add(new CountingSpreadsheetAnalyzer(this.projector, this.roleCountFile));
         return true;
-    }
-
-    /**
-     * This is a file filter that only accepts directories containing subsystem spreadsheets.
-     */
-    public class SubsystemFilter implements FileFilter {
-
-        @Override
-        public boolean accept(File pathname) {
-            boolean retVal = pathname.isDirectory();
-            if (retVal) {
-                File spreadsheetFile = new File(pathname, "spreadsheet");
-                retVal = spreadsheetFile.canRead();
-            }
-            return retVal;
-        }
-
     }
 
     @Override
