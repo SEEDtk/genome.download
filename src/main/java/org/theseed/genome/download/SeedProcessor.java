@@ -13,6 +13,7 @@ import org.theseed.utils.BaseProcessor;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.Argument;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * This command copies the small subset of SEED files needed for testing the CoreSEED utilities.
@@ -27,6 +28,7 @@ import org.apache.commons.io.FileUtils;
  * -v	show more detailed progress messages
  *
  * --clear		erase the output directory before beginning (otherwise only missing items will be copied)
+ * --win		change directory names that are invalid in Windows
  *
  * @author Bruce Parrello
  *
@@ -55,12 +57,20 @@ public class SeedProcessor extends BaseProcessor {
             "assigned_functions" };
     /** list of feature directory files */
     private static final String[] FEATURE_FILES = new String[] { "deleted.features", "fasta" };
+    /** list of invalid characters */
+    private static final String BAD_CHARS = "?\\<>";
+    /** map of character replacements */
+    private static final String[] CHAR_MAP = buildCharMap(BAD_CHARS);
 
     // COMMAND-LINE OPTIONS
 
     /** TRUE to clear the output directory first */
     @Option(name = "--clear", usage = "clear output directory before beginning")
     private boolean clearFlag;
+
+    /** TRUE to translate directory names that are invalid in Windows */
+    @Option(name = "--win", usage = "change invalid subsystem names")
+    private boolean winFlag;
 
     /** input SEED data directory */
     @Argument(index = 0, metaVar = "/vol/core-seed/FIGdisk/FIG/Data", usage = "input coreSEED directory", required = true)
@@ -77,6 +87,22 @@ public class SeedProcessor extends BaseProcessor {
         this.sCopyCount = 0;
         this.gCopyCount = 0;
         this.fCopyCount = 0;
+    }
+
+    /**
+     * This initializes the character translation map.
+     *
+     * @param badChars	list of characters to translate
+     *
+     * @return an array that can be used to translate bad characters
+     */
+    private static String[] buildCharMap(String badChars) {
+        String[] retVal = new String[badChars.length()];
+        for (int i = 0; i < badChars.length(); i++) {
+            int badChar = badChars.charAt(i);
+            retVal[i] = String.format("%%%02X", badChar);
+        }
+        return retVal;
     }
 
     @Override
@@ -195,7 +221,8 @@ public class SeedProcessor extends BaseProcessor {
         for (File subsystemIn : subsystemDirs) {
             // Extract the subsystem name and form the output directory.
             String subsystem = subsystemIn.getName();
-            File subsystemOut = new File(this.subsysOut, subsystem);
+            String subsystem1 = (this.winFlag ? fixSubsystemName(subsystem) : subsystem);
+            File subsystemOut = new File(this.subsysOut, subsystem1);
             if (subsystemOut.exists())
                 log.info("Subsystem {} already exists:  skipped.");
             else {
@@ -204,6 +231,22 @@ public class SeedProcessor extends BaseProcessor {
             }
             sCopyCount++;
         }
+    }
+
+    /**
+     * Replace invalid characters in the subsystem name.
+     *
+     * @param subsystem		subsystem name
+     *
+     * @return the subsystem name in a legal format
+     */
+    protected String fixSubsystemName(String subsystem) {
+        String retVal = subsystem;
+        if (StringUtils.containsAny(subsystem, BAD_CHARS)) {
+            for (int i = 0; i < BAD_CHARS.length(); i++)
+                retVal = retVal.replace(BAD_CHARS.substring(i, i+1), CHAR_MAP[i]);
+        }
+        return retVal;
     }
 
 }

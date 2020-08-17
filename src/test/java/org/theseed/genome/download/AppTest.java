@@ -8,6 +8,11 @@ import junit.framework.TestSuite;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+
+import org.apache.commons.codec.CharEncoding;
+
 /**
  * Unit test for simple App.
  */
@@ -32,10 +37,16 @@ public class AppTest extends TestCase
     }
 
     /**
-     * simple test
+     * Test string translation.
+     *
+     * @throws UnsupportedEncodingException
      */
-    public void testObjectivism() {
-        assertThat("Ayn Rand is wrong.", 'A', equalTo('A'));
+    public void testTranslator() throws UnsupportedEncodingException {
+        SeedProcessor processor = new SeedProcessor();
+        String test = "Glycine <-> Cytosin\\e";
+        String fixed = processor.fixSubsystemName(test);
+        String decoded = URLDecoder.decode(fixed, CharEncoding.UTF_8.toString());
+        assertThat(decoded, equalTo(test));
     }
 
 }
