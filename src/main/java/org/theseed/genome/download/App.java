@@ -44,6 +44,9 @@ public class App
         case "subsystems" :
             processor = new SubsystemProcessor();
             break;
+        case "seed" :
+            processor = new SeedProcessor();
+            break;
         default:
             throw new RuntimeException("Invalid command " + command);
         }
