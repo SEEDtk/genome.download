@@ -6,6 +6,8 @@ package org.theseed.genome.download;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.theseed.genome.core.OrganismDirectories;
 import org.theseed.subsystems.SubsystemFilter;
@@ -50,6 +52,8 @@ public class SeedProcessor extends BaseProcessor {
     private int sCopyCount;
     /** number of files copied */
     private int fCopyCount;
+    /** set of subsystem IDs processed */
+    private Set<String> subIDs;
     /** list of subsystem file names */
     private static final String[] SUBSYS_FILES = new String[] { "CLASSIFICATION", "EXCHANGABLE", "spreadsheet" };
     /** list of genome file names */
@@ -123,6 +127,9 @@ public class SeedProcessor extends BaseProcessor {
         this.orgOut = new File(this.outDir, "Organisms");
         this.setupOutputDir(this.subsysOut);
         this.setupOutputDir(this.orgOut);
+        // Create the subsystem ID map if we are doing the Windows filtering.
+        if (this.winFlag)
+            this.subIDs = new HashSet<String>(2000);
         return true;
     }
 
@@ -221,7 +228,21 @@ public class SeedProcessor extends BaseProcessor {
         for (File subsystemIn : subsystemDirs) {
             // Extract the subsystem name and form the output directory.
             String subsystem = subsystemIn.getName();
-            String subsystem1 = (this.winFlag ? fixSubsystemName(subsystem) : subsystem);
+            String subsystem1 = subsystem;
+            if (this.winFlag) {
+                // For windows, we have to handle directory name pathologies.
+                subsystem1 = this.fixSubsystemName(subsystem);
+                String checkName = subsystem1.toLowerCase();
+                while (this.subIDs.contains(checkName)) {
+                    // Here the new subsystem differs from an old one only by capitalization.
+                    subsystem1 += "_";
+                    checkName += "_";
+                }
+                // Now we have a unique version of the subsystem ID that works on Windows.
+                this.subIDs.add(checkName);
+                if (log.isWarnEnabled() && ! subsystem1.contentEquals(subsystem))
+                    log.warn("Pathological subsystem ID \"{}\" converted to \"{}\".", subsystem, subsystem1);
+            }
             File subsystemOut = new File(this.subsysOut, subsystem1);
             if (subsystemOut.exists())
                 log.info("Subsystem {} already exists:  skipped.");

@@ -49,7 +49,7 @@ import org.theseed.utils.BaseProcessor;
  * A subsystem is ignored if it does not have the EXCHANGABLE marker file or if the word "experimental" appears in the
  * classifications.
  *
- * A subsystem row is ignored if the variant code is "-1" or "*-1".
+ * A subsystem row is ignored if the variant code is "-1", "inactive", or "*-1".
  *
  * The positional parameters are the name of the GTO input directory, the name of the subsystem directory, and
  * the name of the data directory for output files.
