@@ -54,7 +54,7 @@ public class SeedProcessor extends BaseProcessor {
     private static final String[] SUBSYS_FILES = new String[] { "CLASSIFICATION", "EXCHANGABLE", "spreadsheet" };
     /** list of genome file names */
     private static final String[] GENOME_FILES = new String[] {"contigs", "annotations", "GENOME", "TAXONOMY_ID", "TAXONOMY",
-            "assigned_functions" };
+            "assigned_functions", "pattyfams.txt" };
     /** list of feature directory files */
     private static final String[] FEATURE_FILES = new String[] { "deleted.features", "fasta" };
     /** list of invalid characters */
