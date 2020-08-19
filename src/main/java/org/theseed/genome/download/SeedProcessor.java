@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -24,13 +25,14 @@ import org.apache.commons.lang3.StringUtils;
  * This command copies and compresses the small subset of SEED files needed for testing the CoreSEED utilities.
  * This includes parts of the Organisms and Subsystems directories.
  *
- * The positional parameter is the name of the input CoreSEED data directory and the name of the
- * output file.
+ * The positional parameter is the name of the input CoreSEED data directory.  The zip file is produced on the
+ * standard output.
  *
  * The command-line options are as follows:
  *
  * -h	display command-line usage
  * -v	show more detailed progress messages
+ * -o	optional output file, if the standard output is not used
  *
  * --win		change directory names that are invalid in Windows
  *
@@ -56,6 +58,8 @@ public class SeedProcessor extends BaseProcessor {
     private int fCopyCount;
     /** set of subsystem IDs processed */
     private Set<String> subIDs;
+    /** file stream for output, if any */
+    private FileOutputStream fileStream;
     /** zip file output stream */
     private ZipOutputStream zipStream;
     /** read buffer */
@@ -80,20 +84,22 @@ public class SeedProcessor extends BaseProcessor {
     @Option(name = "--win", usage = "change invalid subsystem names")
     private boolean winFlag;
 
+    /** output zip file */
+    @Option(name = "-o", aliases = { "--ouput", "--out" }, metaVar = "CoreCopy.zip", usage = "output zip file")
+    private File outZipFile;
+
     /** input SEED data directory */
     @Argument(index = 0, metaVar = "/vol/core-seed/FIGdisk/FIG/Data", usage = "input coreSEED directory", required = true)
     private File coreDir;
-
-    /** output zip file */
-    @Argument(index = 1, metaVar = "CoreCopy.zip", usage = "output zip file", required = true)
-    private File outZipFile;
-
 
     @Override
     protected void setDefaults() {
         this.sCopyCount = 0;
         this.gCopyCount = 0;
         this.fCopyCount = 0;
+        this.outZipFile = null;
+        this.fileStream = null;
+        this.zipStream = null;
     }
 
     /**
@@ -121,10 +127,7 @@ public class SeedProcessor extends BaseProcessor {
         this.orgIn = new File(this.coreDir, "Organisms");
         if (! this.subsysIn.isDirectory() || ! this.orgIn.isDirectory())
             throw new FileNotFoundException("Input coreSEED directory " + this.coreDir + " is missing Organisms or Subsystems sub-directory.");
-        // Set up the output directory.
-        if (this.outZipFile.isDirectory())
-            throw new FileNotFoundException("Cannot write to output file: a directory was specified.");
-        // The output directory file objects are used to generate directory names for the zip file.
+        // The output directory strings are used to generate directory names for the zip file.
         this.subsysOut = "Subsystems/";
         this.orgOut = "Organisms/";
         // Allocate the read buffer.
@@ -132,14 +135,21 @@ public class SeedProcessor extends BaseProcessor {
         // Create the subsystem ID map if we are doing the Windows filtering.
         if (this.winFlag)
             this.subIDs = new HashSet<String>(2000);
+        // Set up the output file stream.
+        if (this.outZipFile != null) {
+            log.info("Output will be to {}.", this.outZipFile);
+            this.fileStream = new FileOutputStream(this.outZipFile);
+        }
         return true;
     }
 
     @Override
     protected void runCommand() throws Exception {
         // Initialize the output zip stream.
-        try (FileOutputStream fileStream = new FileOutputStream(this.outZipFile)) {
-            this.zipStream = new ZipOutputStream(fileStream);
+        try {
+            // Set up the zip stream.
+            OutputStream outStream = (this.fileStream == null ? System.out : this.fileStream);
+            this.zipStream = new ZipOutputStream(outStream);
             // We must add the master directories.
             this.createDirectory(this.subsysOut);
             this.createDirectory(this.orgOut);
@@ -148,14 +158,14 @@ public class SeedProcessor extends BaseProcessor {
             // Copy the genomes.
             this.copyGenomes();
             // Denote we're done.
+            outStream.flush();
             log.info("All done.  {} genomes, {} subsystems, and {} total files copied.", this.gCopyCount, this.sCopyCount,
                     this.fCopyCount);
-            // Close the zip stream.
-            this.zipStream.close();
-            this.zipStream = null;
         } finally {
             if (this.zipStream != null)
                 this.zipStream.close();
+            if (this.fileStream != null)
+                this.fileStream.close();
         }
     }
 
