@@ -60,7 +60,7 @@ public class SeedProcessor extends BaseProcessor {
     private static final String[] GENOME_FILES = new String[] {"contigs", "annotations", "GENOME", "TAXONOMY_ID", "TAXONOMY",
             "assigned_functions", "pattyfams.txt" };
     /** list of feature directory files */
-    private static final String[] FEATURE_FILES = new String[] { "deleted.features", "fasta" };
+    private static final String[] FEATURE_FILES = new String[] { "deleted.features", "fasta", "tbl" };
     /** list of invalid characters */
     private static final String BAD_CHARS = "?\\<>:*";
     /** map of character replacements */
