@@ -4,7 +4,7 @@
 
   <groupId>org.theseed</groupId>
   <artifactId>genome.download</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>genome.download</name>
   <url>https://www.patricbrc.org</url>

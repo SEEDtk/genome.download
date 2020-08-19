@@ -4,32 +4,34 @@
 package org.theseed.genome.download;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.theseed.genome.core.OrganismDirectories;
 import org.theseed.subsystems.SubsystemFilter;
 import org.theseed.utils.BaseProcessor;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.Argument;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * This command copies the small subset of SEED files needed for testing the CoreSEED utilities.
+ * This command copies and compresses the small subset of SEED files needed for testing the CoreSEED utilities.
  * This includes parts of the Organisms and Subsystems directories.
  *
- * The positional parameters are the names of the input CoreSEED data directory and the name of the
- * output directory.
+ * The positional parameter is the name of the input CoreSEED data directory and the name of the
+ * output file.
  *
  * The command-line options are as follows:
  *
  * -h	display command-line usage
  * -v	show more detailed progress messages
  *
- * --clear		erase the output directory before beginning (otherwise only missing items will be copied)
  * --win		change directory names that are invalid in Windows
  *
  * @author Bruce Parrello
@@ -43,9 +45,9 @@ public class SeedProcessor extends BaseProcessor {
     /** input organism directory */
     private File orgIn;
     /** output subsystem directory */
-    private File subsysOut;
+    private String subsysOut;
     /** output organism directory */
-    private File orgOut;
+    private String orgOut;
     /** number of genomes copied */
     private int gCopyCount;
     /** number of subsystems copied */
@@ -54,6 +56,10 @@ public class SeedProcessor extends BaseProcessor {
     private int fCopyCount;
     /** set of subsystem IDs processed */
     private Set<String> subIDs;
+    /** zip file output stream */
+    private ZipOutputStream zipStream;
+    /** read buffer */
+    private byte[] buffer;
     /** list of subsystem file names */
     private static final String[] SUBSYS_FILES = new String[] { "CLASSIFICATION", "EXCHANGABLE", "spreadsheet" };
     /** list of genome file names */
@@ -65,12 +71,10 @@ public class SeedProcessor extends BaseProcessor {
     private static final String BAD_CHARS = "?\\<>:*";
     /** map of character replacements */
     private static final String[] CHAR_MAP = buildCharMap(BAD_CHARS);
+    /** proposed buffer size */
+    private static final int BUFFER_SIZE = 4096;
 
     // COMMAND-LINE OPTIONS
-
-    /** TRUE to clear the output directory first */
-    @Option(name = "--clear", usage = "clear output directory before beginning")
-    private boolean clearFlag;
 
     /** TRUE to translate directory names that are invalid in Windows */
     @Option(name = "--win", usage = "change invalid subsystem names")
@@ -80,14 +84,13 @@ public class SeedProcessor extends BaseProcessor {
     @Argument(index = 0, metaVar = "/vol/core-seed/FIGdisk/FIG/Data", usage = "input coreSEED directory", required = true)
     private File coreDir;
 
-    /** output directory */
-    @Argument(index = 1, metaVar = "CoreCopy", usage = "output directory", required = true)
-    private File outDir;
+    /** output zip file */
+    @Argument(index = 1, metaVar = "CoreCopy.zip", usage = "output zip file", required = true)
+    private File outZipFile;
 
 
     @Override
     protected void setDefaults() {
-        this.clearFlag = false;
         this.sCopyCount = 0;
         this.gCopyCount = 0;
         this.fCopyCount = 0;
@@ -119,48 +122,54 @@ public class SeedProcessor extends BaseProcessor {
         if (! this.subsysIn.isDirectory() || ! this.orgIn.isDirectory())
             throw new FileNotFoundException("Input coreSEED directory " + this.coreDir + " is missing Organisms or Subsystems sub-directory.");
         // Set up the output directory.
-        if (! this.outDir.isDirectory()) {
-            log.info("Creating output directory {}.", this.outDir);
-            FileUtils.forceMkdir(this.outDir);
-        }
-        this.subsysOut = new File(this.outDir, "Subsystems");
-        this.orgOut = new File(this.outDir, "Organisms");
-        this.setupOutputDir(this.subsysOut);
-        this.setupOutputDir(this.orgOut);
+        if (this.outZipFile.isDirectory())
+            throw new FileNotFoundException("Cannot write to output file: a directory was specified.");
+        // The output directory file objects are used to generate directory names for the zip file.
+        this.subsysOut = "Subsystems/";
+        this.orgOut = "Organisms/";
+        // Allocate the read buffer.
+        this.buffer = new byte[BUFFER_SIZE];
         // Create the subsystem ID map if we are doing the Windows filtering.
         if (this.winFlag)
             this.subIDs = new HashSet<String>(2000);
         return true;
     }
 
-    /**
-     * Insure the specified output directory is valid and, if necessary, clears.
-     *
-     * @param outSubDir		output directory to check
-     *
-     * @throws IOException
-     */
-    private void setupOutputDir(File outSubDir) throws IOException {
-        if (! outSubDir.exists()) {
-            log.info("Creating output subdirectory {}.", outSubDir);
-            FileUtils.forceMkdir(outSubDir);
-        } else if (! outSubDir.isDirectory())
-            throw new IOException(outSubDir + " must be a subdirectory, but it is a file.");
-        else if (this.clearFlag) {
-            log.info("Erasing output subdirectory {}.", outSubDir);
-            FileUtils.cleanDirectory(outSubDir);
+    @Override
+    protected void runCommand() throws Exception {
+        // Initialize the output zip stream.
+        try (FileOutputStream fileStream = new FileOutputStream(this.outZipFile)) {
+            this.zipStream = new ZipOutputStream(fileStream);
+            // We must add the master directories.
+            this.createDirectory(this.subsysOut);
+            this.createDirectory(this.orgOut);
+            // Copy the subsystems.
+            this.copySubsystems();
+            // Copy the genomes.
+            this.copyGenomes();
+            // Denote we're done.
+            log.info("All done.  {} genomes, {} subsystems, and {} total files copied.", this.gCopyCount, this.sCopyCount,
+                    this.fCopyCount);
+            // Close the zip stream.
+            this.zipStream.close();
+            this.zipStream = null;
+        } finally {
+            if (this.zipStream != null)
+                this.zipStream.close();
         }
     }
 
-    @Override
-    protected void runCommand() throws Exception {
-        // Copy the subsystems.
-        this.copySubsystems();
-        // Copy the genomes.
-        this.copyGenomes();
-        // Denote we're done.
-        log.info("All done.  {} genomes, {} subsystems, and {} total files copied.", this.gCopyCount, this.sCopyCount,
-                this.fCopyCount);
+    /**
+     * Create a directory entry in the output zip file.
+     *
+     * @param newDir	name of the new directory
+     *
+     * @throws IOException
+     */
+    private void createDirectory(String newDir) throws IOException {
+        this.zipStream.putNextEntry(new ZipEntry(newDir));
+        this.zipStream.closeEntry();
+
     }
 
     /**
@@ -174,22 +183,18 @@ public class SeedProcessor extends BaseProcessor {
         log.info("{} genomes found in {}.", orgDirs.size(), this.orgIn);
         for (String genomeId : orgDirs) {
             File genomeIn = new File(this.orgIn, genomeId);
-            File genomeOut = new File(this.orgOut, genomeId);
-            if (genomeOut.exists())
-                log.debug("{} exists:  skipping.", genomeId);
-            else {
-                // Copy the basic genome files.
-                log.debug("Copying genome {}.", genomeId);
-                this.dirCopy(genomeIn, genomeOut, GENOME_FILES);
-                // Now we need to process each feature directory.
-                File featureDirsIn = new File(genomeIn, "Features");
-                File featureDirsOut = new File(genomeOut, "Features");
-                if (featureDirsIn.isDirectory()) {
-                    File[] fTypeDirs = featureDirsIn.listFiles(File::isDirectory);
-                    for (File fTypeIn : fTypeDirs) {
-                        File fTypeOut = new File(featureDirsOut, fTypeIn.getName());
-                        this.dirCopy(fTypeIn, fTypeOut, FEATURE_FILES);
-                    }
+            String genomeOut = this.orgOut + genomeId + "/";
+            // Copy the basic genome files.
+            log.debug("Copying genome {}.", genomeId);
+            this.dirCopy(genomeIn, genomeOut, GENOME_FILES);
+            // Now we need to process each feature directory.
+            File featureDirsIn = new File(genomeIn, "Features");
+            File featureDirsOut = new File(genomeOut, "Features");
+            if (featureDirsIn.isDirectory()) {
+                File[] fTypeDirs = featureDirsIn.listFiles(File::isDirectory);
+                for (File fTypeIn : fTypeDirs) {
+                    String fTypeOut = featureDirsOut + fTypeIn.getName() + "/";
+                    this.dirCopy(fTypeIn, fTypeOut, FEATURE_FILES);
                 }
             }
             this.gCopyCount++;
@@ -197,20 +202,29 @@ public class SeedProcessor extends BaseProcessor {
     }
 
     /**
-     * Copy the specified files from the input directory to the output directory.
+     * Copy the specified files from the input directory to the zip file.  The copy
+     * assumes the directory does not exist in the ZIP file yet.  It must not be
+     * used again.
      *
      * @param dirIn		input directory
-     * @param dirOut	output directory (usually must be created)
+     * @param dirOut	output directory name
      * @param files		names of files to copy
      *
      * @throws IOException
      */
-    private void dirCopy(File dirIn, File dirOut, String[] files) throws IOException {
+    private void dirCopy(File dirIn, String dirOut, String[] files) throws IOException {
+        this.createDirectory(dirOut);
         for (String fileName : files) {
             File oldFile = new File(dirIn, fileName);
             if (oldFile.exists()) {
-                // This automatically creates the output directory if necessary.
-                FileUtils.copyFileToDirectory(new File(dirIn, fileName), dirOut);
+                // This automatically creates the output directory.
+                ZipEntry fileEntry = new ZipEntry(dirOut + fileName);
+                this.zipStream.putNextEntry(fileEntry);
+                try (FileInputStream oldStream = new FileInputStream(oldFile)) {
+                    for (int len = oldStream.read(buffer); len >= 0; len = oldStream.read(buffer))
+                        this.zipStream.write(this.buffer, 0, len);
+                }
+                this.zipStream.closeEntry();
                 this.fCopyCount++;
             }
         }
@@ -243,13 +257,9 @@ public class SeedProcessor extends BaseProcessor {
                 if (log.isWarnEnabled() && ! subsystem1.contentEquals(subsystem))
                     log.warn("Pathological subsystem ID \"{}\" converted to \"{}\".", subsystem, subsystem1);
             }
-            File subsystemOut = new File(this.subsysOut, subsystem1);
-            if (subsystemOut.exists())
-                log.info("Subsystem {} already exists:  skipped.");
-            else {
-                log.debug("Copying subsystem {}.", subsystem);
-                this.dirCopy(subsystemIn, subsystemOut, SUBSYS_FILES);
-            }
+            String subsystemOut = this.subsysOut + subsystem1 + "/";
+            log.debug("Copying subsystem {}.", subsystem);
+            this.dirCopy(subsystemIn, subsystemOut, SUBSYS_FILES);
             sCopyCount++;
         }
     }
