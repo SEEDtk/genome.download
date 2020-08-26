@@ -193,21 +193,27 @@ public class SeedProcessor extends BaseProcessor {
         log.info("{} genomes found in {}.", orgDirs.size(), this.orgIn);
         for (String genomeId : orgDirs) {
             File genomeIn = new File(this.orgIn, genomeId);
-            String genomeOut = this.orgOut + genomeId + "/";
-            // Copy the basic genome files.
-            log.debug("Copying genome {}.", genomeId);
-            this.dirCopy(genomeIn, genomeOut, GENOME_FILES);
-            // Now we need to process each feature directory.
-            File featureDirsIn = new File(genomeIn, "Features");
-            File featureDirsOut = new File(genomeOut, "Features");
-            if (featureDirsIn.isDirectory()) {
-                File[] fTypeDirs = featureDirsIn.listFiles(File::isDirectory);
-                for (File fTypeIn : fTypeDirs) {
-                    String fTypeOut = featureDirsOut + fTypeIn.getName() + "/";
-                    this.dirCopy(fTypeIn, fTypeOut, FEATURE_FILES);
+            // Insure the genome is real.
+            File deleteFile = new File(genomeIn, "DELETED");
+            if (deleteFile.exists()) {
+                log.debug("Skipping deleted genome {}.", genomeId);
+            } else {
+                String genomeOut = this.orgOut + genomeId + "/";
+                // Copy the basic genome files.
+                log.debug("Copying genome {}.", genomeId);
+                this.dirCopy(genomeIn, genomeOut, GENOME_FILES);
+                // Now we need to process each feature directory.
+                File featureDirsIn = new File(genomeIn, "Features");
+                String featureDirsOut = genomeOut + "Features/";
+                if (featureDirsIn.isDirectory()) {
+                    File[] fTypeDirs = featureDirsIn.listFiles(File::isDirectory);
+                    for (File fTypeIn : fTypeDirs) {
+                        String fTypeOut = featureDirsOut + fTypeIn.getName() + "/";
+                        this.dirCopy(fTypeIn, fTypeOut, FEATURE_FILES);
+                    }
                 }
+                this.gCopyCount++;
             }
-            this.gCopyCount++;
         }
     }
 
