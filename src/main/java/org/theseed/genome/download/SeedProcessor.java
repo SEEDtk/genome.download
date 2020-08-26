@@ -65,7 +65,7 @@ public class SeedProcessor extends BaseProcessor {
     /** read buffer */
     private byte[] buffer;
     /** list of subsystem file names */
-    private static final String[] SUBSYS_FILES = new String[] { "CLASSIFICATION", "EXCHANGABLE", "spreadsheet", "ERRORCOUNT" };
+    private static final String[] SUBSYS_FILES = new String[] { "CLASSIFICATION", "EXCHANGABLE", "spreadsheet", "ERRORCOUNT", "curation.log" };
     /** list of genome file names */
     private static final String[] GENOME_FILES = new String[] {"contigs", "annotations", "GENOME", "TAXONOMY_ID", "TAXONOMY",
             "assigned_functions", "pattyfams.txt" };
