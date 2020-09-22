@@ -7,11 +7,15 @@ import org.theseed.utils.BaseProcessor;
 /**
  * Download genomes into genome directories.
  *
- * vipr		create the genomes from ViPR download files
- * patric	download the genomes from the PATRIC website
- * core		extract genomes from a SEED organism directory
- * ncbi		create a genome from NCBI download files
- * md5		compute MD5s from FASTA files
+ * fasta		convert FASTA files into skeleton GTOs
+ * vipr			create the genomes from ViPR download files
+ * patric		download the genomes from the PATRIC website
+ * core			extract genomes from a SEED organism directory
+ * ncbi			create a genome from NCBI download files
+ * md5			compute MD5s from FASTA files
+ * subsystems	apply subsystems to downloaded genomes
+ * seed			compress the SEED into an output file
+ * project		project subsystems onto GTOs
  *
  */
 public class App
@@ -46,6 +50,9 @@ public class App
             break;
         case "seed" :
             processor = new SeedProcessor();
+            break;
+        case "project" :
+            processor = new ProjectionProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
