@@ -32,6 +32,7 @@ import org.theseed.subsystems.TrackingSpreadsheetAnalyzer;
 import org.theseed.subsystems.VariantId;
 import org.theseed.subsystems.SubsystemFilter;
 import org.theseed.utils.BaseProcessor;
+import org.theseed.utils.ParseFailureException;
 
 /**
  * This command processes a CoreSEED subsystem directory and applies the subsystems to the CoreSEED genomes
@@ -121,9 +122,9 @@ public class SubsystemProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected boolean validateParms() throws IOException, ParseFailureException {
         if (this.batchSize < 1)
-            throw new IllegalArgumentException("Invalid batch size.  Must be 1 or greater.");
+            throw new ParseFailureException("Invalid batch size.  Must be 1 or greater.");
         if (! this.subsysDir.isDirectory())
             throw new FileNotFoundException("Subsystem directory " + this.subsysDir + " not found or invalid.");
         if (! gtoDir.isDirectory())

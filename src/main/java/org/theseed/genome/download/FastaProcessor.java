@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.theseed.genome.FastaGenome;
 import org.theseed.genome.Genome;
 import org.theseed.utils.BaseProcessor;
+import org.theseed.utils.ParseFailureException;
 
 /**
  * This command converts FASTA files into skeleton GTOs.
@@ -68,7 +69,7 @@ public class FastaProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected boolean validateParms() throws IOException, ParseFailureException {
         // Insure the domain is valid.
         switch (this.domain) {
         case "Bacteria" :
@@ -78,7 +79,7 @@ public class FastaProcessor extends BaseProcessor {
             log.info("Genome domain is {}.", this.domain);
             break;
         default :
-            throw new IllegalArgumentException("Invalid domain " + this.domain + ".");
+            throw new ParseFailureException("Invalid domain " + this.domain + ".");
         }
         // Insure the file is valid.
         if (! this.fastaFile.canRead())
