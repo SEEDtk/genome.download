@@ -7,11 +7,15 @@ import org.theseed.utils.BaseProcessor;
 /**
  * Download genomes into genome directories.
  *
- * vipr		create the genomes from ViPR download files
- * patric	download the genomes from the PATRIC website
- * core		extract genomes from a SEED organism directory
- * ncbi		create a genome from NCBI download files
- * md5		compute MD5s from FASTA files
+ * vipr			create the genomes from ViPR download files
+ * patric		download the genomes from the PATRIC website
+ * core			extract genomes from a SEED organism directory
+ * ncbi			create a genome from NCBI download files
+ * md5			compute MD5s from FASTA files
+ * subsystems	apply CoreSEED subsystems to GTOs
+ * seed			create a testing subset for CoreSEED
+ * fasta		convert FASTA files into skeleton GTOs
+ * subTable		create a subsystem directory file for a genome
  *
  */
 public class App
@@ -46,6 +50,9 @@ public class App
             break;
         case "seed" :
             processor = new SeedProcessor();
+            break;
+        case "subTable" :
+            processor = new SubTableProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
