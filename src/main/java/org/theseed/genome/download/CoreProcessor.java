@@ -92,7 +92,7 @@ public class CoreProcessor extends BaseProcessor {
             else {
                 Genome gto = new CoreGenome(p3, new File(this.inDir, genomeId));
                 log.info("Writing {} to {}.", gto, outFile);
-                gto.update(outFile);
+                gto.save(outFile);
             }
         }
         log.info("All done.");

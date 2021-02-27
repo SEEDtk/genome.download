@@ -97,7 +97,7 @@ public class FastaProcessor extends BaseProcessor {
                 this.fastaFile);
         log.info("Genome {} loaded from {}.", genome, this.fastaFile);
         File outFile = new File(this.outDir, genome.getId() + ".gto");
-        genome.update(outFile);
+        genome.save(outFile);
         log.info("Genome written to {}.", outFile);
     }
 

@@ -255,7 +255,7 @@ public class SubsystemProcessor extends BaseProcessor {
             File outFile = this.fileMap.get(genomeId);
             Genome genome = genomeEntry.getValue();
             log.info("Saving {} to {}.", genome, outFile);
-            genome.update(outFile);
+            genome.save(outFile);
         }
 
     }

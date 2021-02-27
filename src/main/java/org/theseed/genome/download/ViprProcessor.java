@@ -91,7 +91,7 @@ public class ViprProcessor extends BaseProcessor {
         for (ViprGenome virus : viruses) {
             File virusFile = new File(this.outDir, virus.getId() + ".gto");
             log.info("Writing {} to {}.", virus.getSourceId(), virusFile);
-            virus.update(virusFile);
+            virus.save(virusFile);
         }
         log.info("All done. {} viruses output.", viruses.size());
     }

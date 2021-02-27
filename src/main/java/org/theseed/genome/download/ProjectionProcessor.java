@@ -96,7 +96,7 @@ public class ProjectionProcessor extends BaseProcessor {
             this.projector.project(genome);
             File outFile = new File(this.outDir, genome.getId() + ".gto");
             log.info("Saving genome to {}.", outFile);
-            genome.update(outFile);
+            genome.save(outFile);
         }
     }
 

@@ -155,7 +155,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
                             this.projector.project(genome);
                         // Write the genome.
                         log.info("Writing {} to {}.", genome, outFile);
-                        genome.update(outFile);
+                        genome.save(outFile);
                         gCount++;
                     }
                 }
