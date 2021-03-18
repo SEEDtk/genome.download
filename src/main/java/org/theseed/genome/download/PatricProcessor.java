@@ -146,7 +146,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
                 if (this.missingOnly && outFile.exists()) {
                     log.info("{} already present-- skipped.", outFile);
                 } else {
-                    P3Genome genome = P3Genome.Load(this.p3, genomeId, P3Genome.Details.FULL);
+                    P3Genome genome = P3Genome.load(this.p3, genomeId, P3Genome.Details.FULL);
                     if (genome == null)
                         log.error("Genome {} not found.", genomeId);
                     else {
