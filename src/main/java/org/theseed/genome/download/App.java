@@ -17,6 +17,7 @@ import org.theseed.utils.BaseProcessor;
  * subsystems	apply subsystems to downloaded genomes
  * seed			compress the SEED into an output file
  * project		project subsystems onto GTOs
+ * copy			copy genomes from a source to a local directory
  *
  */
 public class App
@@ -57,6 +58,9 @@ public class App
             break;
         case "project" :
             processor = new ProjectionProcessor();
+            break;
+        case "copy" :
+            processor = new GenomeCopyProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
