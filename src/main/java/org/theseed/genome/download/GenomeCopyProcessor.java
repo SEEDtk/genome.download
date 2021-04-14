@@ -4,9 +4,13 @@
 package org.theseed.genome.download;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -47,11 +51,9 @@ public class GenomeCopyProcessor extends BaseProcessor {
     // FIELDS
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(GenomeCopyProcessor.class);
-    /** input genomes */
-    private GenomeSource genomes;
     /** output master directory */
     private IGenomeTarget targetDir;
-    /** filter set */
+    /** filter set, or NULL if there is no filtering */
     private Set<String> filterSet;
 
     /** TRUE to erase any old genomes */
@@ -74,13 +76,13 @@ public class GenomeCopyProcessor extends BaseProcessor {
     @Option(name = "--filter", metaVar = "include.tbl", usage = "file containing IDs of genomes to copy")
     private File filterFile;
 
-    /** input genome file or directory */
-    @Argument(index = 0, metaVar = "inDir", usage = "input genomes (file or directory)", required = true)
-    private File inDir;
-
     /** output master directory */
-    @Argument(index = 1, metaVar = "outDir", usage = "output genome master directory", required = true)
+    @Argument(index = 0, metaVar = "outDir", usage = "output genome master directory", required = true)
     private File outDir;
+
+    /** input genome files or directories */
+    @Argument(index = 1, metaVar = "inDir1 inDir2 ...", usage = "input genomes (file or directory)")
+    private List<File> inDirs;
 
     @Override
     protected void setDefaults() {
@@ -89,47 +91,63 @@ public class GenomeCopyProcessor extends BaseProcessor {
         this.clearFlag = false;
         this.missingFlag = false;
         this.filterFile = null;
+        this.inDirs = new ArrayList<File>();
     }
 
     @Override
     protected boolean validateParms() throws IOException, ParseFailureException {
-        // Create the source stream.
-        this.genomes = this.inType.create(this.inDir);
-        // Connect to the output directory.
+        // Insure we create the output directory if it does not exist.
+        if (! this.outDir.isDirectory()) this.clearFlag = true;
+        // Connect to it.
         this.targetDir = this.outType.create(this.outDir, this.clearFlag);
-        log.info("Copying from {} to {}.", this.inDir, this.outDir);
         // Create the filter if needed.
-        if (this.filterFile == null)
-            this.filterSet = this.genomes.getIDs();
-        else {
+        if (this.filterFile == null) {
+            log.info("No filtering specified.");
+            this.filterSet = null;
+        } else {
             this.filterSet = TabbedLineReader.readSet(this.filterFile, "1");
             log.info("{} genome IDs read from filter file {}.", this.filterSet.size(),
                     this.filterFile);
-            this.filterSet.retainAll(this.genomes.getIDs());
+        }
+        // Verify the input sources.
+        for (File inDir : this.inDirs) {
+            if (! inDir.exists())
+                throw new FileNotFoundException("Genome source " + inDir + " is not found.");
         }
         return true;
     }
 
     @Override
     protected void runCommand() throws Exception {
-        long count = 0;
-        long total = this.filterSet.size();
         long start = System.currentTimeMillis();
-        log.info("{} genomes will be copied.", this.filterSet.size());
-        for (String genomeId : this.filterSet) {
-            // Verify that we should copy this genome.
-            if (this.missingFlag && this.targetDir.contains(genomeId))
-                log.info("Genome {} already in target-- skipped.", genomeId);
-            else {
-                // Try to get the genome.
-                Genome genome = this.genomes.getGenome(genomeId);
-                // Copy it.
-                if (genome != null)
-                    this.targetDir.add(genome);
+        long allCount = 0;
+        // Loop through the input directories.
+        for (File inDir : this.inDirs) {
+            log.info("Copying genomes from {}.", inDir);
+            GenomeSource genomes = this.inType.create(inDir);
+            // Get a copy of the genome ID set for this source.
+            Set<String> genomeIds = new TreeSet<String>(genomes.getIDs());
+            if (this.filterSet != null)
+                genomeIds.retainAll(this.filterSet);
+            log.info("{} genomes will be copied.", genomeIds.size());
+            long count = 0;
+            long total = genomeIds.size();
+            for (String genomeId : genomeIds) {
+                // Verify that we should copy this genome.
+                if (this.missingFlag && this.targetDir.contains(genomeId))
+                    log.info("Genome {} already in target-- skipped.", genomeId);
+                else {
+                    // Try to get the genome.
+                    Genome genome = genomes.getGenome(genomeId);
+                    // Copy it.
+                    if (genome != null)
+                        this.targetDir.add(genome);
+                }
+                count++;
+                allCount++;
+                Duration speed = Duration.ofMillis(System.currentTimeMillis() - start).dividedBy(allCount);
+                log.info("{} of {} processed in source {}; {} per genome.", count, total, inDir, speed.toString());
             }
-            count++;
-            Duration speed = Duration.ofMillis(System.currentTimeMillis() - start).dividedBy(count);
-            log.info("{} of {} processed; {} per genome.", count, total, speed.toString());
         }
     }
 
