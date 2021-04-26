@@ -38,6 +38,7 @@ import org.theseed.utils.ICommand;
  * --missing	only download genomes not already present
  * --projector	if specified, the name of a subsystem projector file for computing the subsystems
  * --subsystems	if specified, subsystems will be downloaded from PATRIC
+ * --level		detail level to download; the default is FULL
  *
  * @author Bruce Parrello
  *
@@ -78,6 +79,10 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
     @Option(name = "--subsystems", usage = "project subsystems from PATRIC", forbids = { "--projector" })
     private boolean subsystemFlag;
 
+    /** detail level to download */
+    @Option(name = "--level", usage = "detail level needed for the genome")
+    private P3Genome.Details level;
+
     /** name of the output directory */
     @Argument(index = 0, metaVar = "outDir", usage = "name of the output directory", required = true)
     private File outDir;
@@ -90,6 +95,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
         this.missingOnly = false;
         this.subsystemFlag = false;
         this.projectorFile = null;
+        this.level = P3Genome.Details.FULL;
     }
 
     @Override
@@ -146,7 +152,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
                 if (this.missingOnly && outFile.exists()) {
                     log.info("{} already present-- skipped.", outFile);
                 } else {
-                    P3Genome genome = P3Genome.load(this.p3, genomeId, P3Genome.Details.FULL);
+                    P3Genome genome = P3Genome.load(this.p3, genomeId, this.level);
                     if (genome == null)
                         log.error("Genome {} not found.", genomeId);
                     else {

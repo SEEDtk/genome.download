@@ -30,7 +30,7 @@
             <zipfileset excludes="META-INF/*.SF" src="${env.HOME}/.m2/repository/commons-logging/commons-logging/1.2/commons-logging-1.2.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="${env.HOME}/.m2/repository/commons-codec/commons-codec/1.11/commons-codec-1.11.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="${env.HOME}/.m2/repository/org/apache/httpcomponents/fluent-hc/4.5.12/fluent-hc-4.5.12.jar"/>
-            <zipfileset excludes="META-INF/*.SF" src="${env.HOME}/.m2/repository/commons-io/commons-io/2.6/commons-io-2.6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${env.HOME}/.m2/repository/commons-io/commons-io/2.8.0/commons-io-2.8.0.jar"/>
         </jar>
     </target>
 </project>
