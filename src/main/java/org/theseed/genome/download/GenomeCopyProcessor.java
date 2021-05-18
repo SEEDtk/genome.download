@@ -119,41 +119,38 @@ public class GenomeCopyProcessor extends BaseProcessor {
 
     @Override
     protected void runCommand() throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            long allCount = 0;
-            // Loop through the input directories.
-            for (File inDir : this.inDirs) {
-                log.info("Copying genomes from {}.", inDir);
-                GenomeSource genomes = this.inType.create(inDir);
-                // Get a copy of the genome ID set for this source.
-                Set<String> genomeIds = new TreeSet<String>(genomes.getIDs());
-                if (this.filterSet != null)
-                    genomeIds.retainAll(this.filterSet);
-                log.info("{} genomes will be copied.", genomeIds.size());
-                long count = 0;
-                long total = genomeIds.size();
-                for (String genomeId : genomeIds) {
-                    // Verify that we should copy this genome.
-                    if (this.missingFlag && this.targetDir.contains(genomeId))
-                        log.info("Genome {} already in target-- skipped.", genomeId);
-                    else {
-                        // Try to get the genome.
-                        Genome genome = genomes.getGenome(genomeId);
-                        // Copy it.
-                        if (genome != null)
-                            this.targetDir.add(genome);
-                    }
-                    count++;
-                    allCount++;
-                    Duration speed = Duration.ofMillis(System.currentTimeMillis() - start).dividedBy(allCount);
-                    log.info("{} of {} processed in source {}; {} per genome.", count, total, inDir, speed.toString());
+        long start = System.currentTimeMillis();
+        long allCount = 0;
+        // Loop through the input directories.
+        for (File inDir : this.inDirs) {
+            log.info("Copying genomes from {}.", inDir);
+            GenomeSource genomes = this.inType.create(inDir);
+            // Get a copy of the genome ID set for this source.
+            Set<String> genomeIds = new TreeSet<String>(genomes.getIDs());
+            if (this.filterSet != null)
+                genomeIds.retainAll(this.filterSet);
+            log.info("{} genomes will be copied.", genomeIds.size());
+            long count = 0;
+            long total = genomeIds.size();
+            for (String genomeId : genomeIds) {
+                // Verify that we should copy this genome.
+                if (this.missingFlag && this.targetDir.contains(genomeId))
+                    log.info("Genome {} already in target-- skipped.", genomeId);
+                else {
+                    // Try to get the genome.
+                    Genome genome = genomes.getGenome(genomeId);
+                    // Copy it.
+                    if (genome != null)
+                        this.targetDir.add(genome);
                 }
+                count++;
+                allCount++;
+                Duration speed = Duration.ofMillis(System.currentTimeMillis() - start).dividedBy(allCount);
+                log.info("{} of {} processed in source {}; {} per genome.", count, total, inDir, speed.toString());
             }
-        } finally {
-            log.info("Cleaning up {}.", this.targetDir);
-            this.targetDir.close();
         }
+        log.info("Cleaning up {}.", this.targetDir);
+        this.targetDir.finish();
     }
 
 }
