@@ -61,7 +61,7 @@ public class GenomeCopyProcessor extends BaseProcessor {
     private boolean clearFlag;
 
     /** TRUE to only copy new genomes */
-    @Option(name = "--missing", usage = "if specified, input genomes not overwrite existing genomes")
+    @Option(name = "--missing", usage = "if specified, input genomes will not overwrite existing genomes")
     private boolean missingFlag;
 
     /** type of input */
@@ -97,7 +97,7 @@ public class GenomeCopyProcessor extends BaseProcessor {
     @Override
     protected boolean validateParms() throws IOException, ParseFailureException {
         // Insure we create the output directory if it does not exist.
-        if (! this.outDir.isDirectory()) this.clearFlag = true;
+        if (! this.outDir.exists()) this.clearFlag = true;
         // Connect to it.
         this.targetDir = this.outType.create(this.outDir, this.clearFlag);
         // Create the filter if needed.
