@@ -121,6 +121,9 @@ public class GenomeCopyProcessor extends BaseProcessor {
     protected void runCommand() throws Exception {
         long start = System.currentTimeMillis();
         long allCount = 0;
+        int skipCount = 0;
+        int missCount = 0;
+        int copyCount = 0;
         // Loop through the input directories.
         for (File inDir : this.inDirs) {
             log.info("Copying genomes from {}.", inDir);
@@ -134,14 +137,20 @@ public class GenomeCopyProcessor extends BaseProcessor {
             long total = genomeIds.size();
             for (String genomeId : genomeIds) {
                 // Verify that we should copy this genome.
-                if (this.missingFlag && this.targetDir.contains(genomeId))
+                if (this.missingFlag && this.targetDir.contains(genomeId)) {
                     log.info("Genome {} already in target-- skipped.", genomeId);
-                else {
+                    skipCount++;
+                } else {
                     // Try to get the genome.
                     Genome genome = genomes.getGenome(genomeId);
                     // Copy it.
-                    if (genome != null)
+                    if (genome != null) {
                         this.targetDir.add(genome);
+                        copyCount++;
+                    } else {
+                        log.warn("Did not find genome {}.", genomeId);
+                        missCount++;
+                    }
                 }
                 count++;
                 allCount++;
@@ -149,7 +158,8 @@ public class GenomeCopyProcessor extends BaseProcessor {
                 log.info("{} of {} processed in source {}; {} per genome.", count, total, inDir, speed.toString());
             }
         }
-        log.info("Cleaning up {}.", this.targetDir);
+        log.info("Cleaning up {}.  {} copied, {} not found, {} skipped.", this.targetDir,
+                copyCount, missCount, skipCount);
         this.targetDir.finish();
     }
 

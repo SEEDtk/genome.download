@@ -18,6 +18,7 @@ import org.theseed.utils.BaseProcessor;
  * seed			compress the SEED into an output file
  * project		project subsystems onto GTOs
  * copy			copy genomes from a source to a local directory
+ * list			list the IDs of all the genomes in a genome source
  *
  */
 public class App
@@ -61,6 +62,9 @@ public class App
             break;
         case "copy" :
             processor = new GenomeCopyProcessor();
+            break;
+        case "list" :
+            processor = new MasterListProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
