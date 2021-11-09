@@ -11,7 +11,7 @@ import org.apache.commons.io.FileUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.theseed.io.TabbedLineReader;
-import org.theseed.p3api.Connection;
+import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.p3api.P3SubsystemProjector;
 import org.theseed.subsystems.SubsystemProjector;
@@ -53,7 +53,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
     /** subsystem projector */
     private SubsystemProjector projector;
     /** connection to PATRIC */
-    private Connection p3;
+    private P3Connection p3;
 
     // COMMAND-LINE OPTIONS
 
@@ -124,7 +124,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
             this.inStream = new TabbedLineReader(this.inFile);
         }
         // Connect to PATRIC.
-        this.p3 = new Connection();
+        this.p3 = new P3Connection();
         // Set up the subsystem projector.
         this.projector = null;
         if (this.projectorFile != null) {

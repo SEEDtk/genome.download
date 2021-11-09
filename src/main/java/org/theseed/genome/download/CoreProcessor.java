@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.theseed.genome.Genome;
 import org.theseed.genome.core.CoreGenome;
 import org.theseed.genome.core.OrganismDirectories;
-import org.theseed.p3api.Connection;
+import org.theseed.p3api.P3Connection;
 import org.theseed.utils.BaseProcessor;
 
 /**
@@ -81,7 +81,7 @@ public class CoreProcessor extends BaseProcessor {
     @Override
     protected void runCommand() throws Exception {
         // Get a PATRIC connection.
-        Connection p3 = new Connection();
+        P3Connection p3 = new P3Connection();
         // Loop through the genome subdirectories.
         OrganismDirectories orgDirs = new OrganismDirectories(this.inDir);
         log.info("{} genomes found in {}.", orgDirs.size(), this.inDir);
