@@ -16,7 +16,7 @@ import org.theseed.utils.BaseProcessor;
 import org.theseed.utils.ParseFailureException;
 
 /**
- * This command reads a genome file and produces a subsystem directory as output.  The directory can be read
+ * This command reads a genome file and produces a table of subsystem information as output.  The table can be read
  * by other commands for rapid conversion of feature IDs to subsystem lists.
  *
  * The positional parameters are the name of the genome file and the name for the output file.

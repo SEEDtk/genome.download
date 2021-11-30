@@ -81,7 +81,7 @@ public class ProjectionProcessor extends BaseProcessor {
         }
         // Read the projector file.
         log.info("Reading subsystem projector from {}.", this.projectorFile);
-        this.projector = SubsystemProjector.Load(this.projectorFile);
+        this.projector = SubsystemProjector.load(this.projectorFile);
         return true;
     }
 

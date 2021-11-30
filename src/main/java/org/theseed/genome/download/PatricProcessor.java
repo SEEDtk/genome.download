@@ -129,7 +129,7 @@ public class PatricProcessor extends BaseProcessor implements ICommand {
         this.projector = null;
         if (this.projectorFile != null) {
             log.info("Loading subsystem projector from {}.", this.projectorFile);
-            this.projector = SubsystemProjector.Load(this.projectorFile);
+            this.projector = SubsystemProjector.load(this.projectorFile);
         } else if (this.subsystemFlag) {
             log.info("Subsystems will be projected from PATRIC data.");
             this.projector = new P3SubsystemProjector(p3);
