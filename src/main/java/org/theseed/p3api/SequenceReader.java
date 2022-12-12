@@ -28,7 +28,7 @@ public abstract class SequenceReader {
      */
     public static enum Type {
         /** DNA FASTA for contigs */
-        CONTIG {
+        CONTIGS {
             @Override
             public SequenceReader create(P3Connection p3) {
                 return new ContigSequenceReader(p3);

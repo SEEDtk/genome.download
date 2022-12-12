@@ -40,7 +40,8 @@ public class ContigSequenceReader extends SequenceReader {
             // Skip the sequence if it is blank.
             if (! sequence.isEmpty()) {
                 // Get the label and the comment.  For genomes created from read assemblies, the description is the original contig ID.
-                String label = P3Connection.getString(contig, "sequence_id");
+                // Note we prefix the genome ID to the contig ID to insure uniqueness if the output groups are combined.
+                String label = genomeId + ":" + P3Connection.getString(contig, "sequence_id");
                 String comment = P3Connection.getString(contig, "description");
                 // Output the sequence.
                 retVal.add(new Sequence(label, comment, sequence));

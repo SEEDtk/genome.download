@@ -8,7 +8,8 @@ import org.theseed.utils.BaseProcessor;
  * Download genomes into genome directories.
  *
  * subTable		create a subsystem directory file for a genome
- * fasta		download FASTA files from the PATRIC website
+ * fasta		download a FASTA file from the PATRIC website
+ * fastaDir		download a directory of FASTA files from the PATRIC website
  * vipr			create the genomes from ViPR download files
  * patric		download the genomes from the PATRIC website
  * core			extract genomes from a SEED organism directory
@@ -32,6 +33,9 @@ public class App
         switch (command) {
         case "fasta" :
             processor = new FastaProcessor();
+            break;
+        case "fastaDir" :
+            processor = new FastaDirProcessor();
             break;
         case "ncbi" :
             processor = new GffProcessor();
