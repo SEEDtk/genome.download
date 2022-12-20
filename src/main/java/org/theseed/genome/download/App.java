@@ -20,6 +20,7 @@ import org.theseed.utils.BaseProcessor;
  * project		project subsystems onto GTOs
  * copy			copy genomes from a source to a local directory
  * list			list the IDs of all the genomes in a genome source
+ * sync			synchronize a genome target with a list of PATRIC genome IDs
  *
  */
 public class App
@@ -69,6 +70,9 @@ public class App
             break;
         case "list" :
             processor = new MasterListProcessor();
+            break;
+        case "sync" :
+            processor = new SynchronizeProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
