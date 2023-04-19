@@ -21,6 +21,7 @@ import org.theseed.utils.BaseProcessor;
  * copy			copy genomes from a source to a local directory
  * list			list the IDs of all the genomes in a genome source
  * sync			synchronize a genome target with a list of PATRIC genome IDs
+ * subMap		create a map from subsystem IDs to subsystem names
  *
  */
 public class App
@@ -73,6 +74,9 @@ public class App
             break;
         case "sync" :
             processor = new SynchronizeProcessor();
+            break;
+        case "subMap" :
+            processor = new SubMapProcesor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
