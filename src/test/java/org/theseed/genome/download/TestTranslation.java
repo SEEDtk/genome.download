@@ -1,46 +1,30 @@
+/**
+ *
+ */
 package org.theseed.genome.download;
-
-import junit.framework.Test;
-
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 
 import org.apache.commons.codec.CharEncoding;
+import org.junit.Test;
 
 /**
- * Unit test for simple App.
+ * @author Bruce Parrello
+ *
  */
-public class AppTest extends TestCase
-{
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public AppTest( String testName )
-    {
-        super( testName );
-    }
-
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite()
-    {
-        return new TestSuite( AppTest.class );
-    }
+public class TestTranslation {
 
     /**
      * Test string translation.
      *
      * @throws UnsupportedEncodingException
      */
+    @Test
     public void testTranslator() throws UnsupportedEncodingException {
         SeedProcessor processor = new SeedProcessor();
         String test = "Glycine <-> Cytosin\\e";

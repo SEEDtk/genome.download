@@ -1,0 +1,4 @@
+description	value
+All samples	thr.predictions.tbl
+All samples, trained on production <= 1.2	thrl.predictions.tbl
+24-hour samples	thr24.predictions.tbl
