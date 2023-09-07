@@ -15,7 +15,7 @@ import org.theseed.utils.BaseProcessor;
  * core			extract genomes from a SEED organism directory
  * ncbi			create a genome from NCBI download files
  * md5			compute MD5s from FASTA files
- * subsystems	apply subsystems to downloaded genomes
+ * subsystems	compute a subsystem projector for the CoreSEED
  * seed			compress the SEED into an output file
  * project		project subsystems onto GTOs
  * copy			copy genomes from a source to a local directory

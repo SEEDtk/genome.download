@@ -65,7 +65,7 @@ public class SeedProcessor extends BaseProcessor implements FileTarget.IParms {
     /** list of feature directory files */
     private static final String[] FEATURE_FILES = new String[] { "deleted.features", "fasta", "tbl" };
     /** list of invalid characters */
-    private static final String BAD_CHARS = "?\\<>:*";
+    private static final String BAD_CHARS = "?\\<>:*%";
     /** map of character replacements */
     private static final String[] CHAR_MAP = buildCharMap(BAD_CHARS);
 

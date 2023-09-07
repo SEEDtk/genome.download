@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -19,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
-import org.theseed.genome.GenomeDirectory;
+import org.theseed.genome.iterator.GenomeSource;
 import org.theseed.io.LineReader;
 import org.theseed.io.MarkerFile;
 import org.theseed.proteins.RoleSet;
@@ -35,9 +36,7 @@ import org.theseed.utils.BaseProcessor;
 import org.theseed.utils.ParseFailureException;
 
 /**
- * This command processes a CoreSEED subsystem directory and applies the subsystems to the CoreSEED genomes
- * found in the input directory.  The genomes will be updated in place.  It also optionally produces a data file
- * that can be used to project subsystems onto GTOs.
+ * This command processes a CoreSEED data directory and computes the subsystem projector.
  *
  * Subsystems in CoreSEED are stored externally to the genome directory, so all the genomes have to be updated
  * in parallel, which means they are all loaded into memory.  The key aspects of each subsystem are the classifications
@@ -52,18 +51,16 @@ import org.theseed.utils.ParseFailureException;
  *
  * A subsystem row is ignored if the variant code is "-1", "inactive", or "*-1".
  *
- * The positional parameters are the name of the GTO input directory, the name of the subsystem directory, and
- * the name of the data directory for output files.
+ * The positional parameters are the name of the CoreSEED data directory and the name of the data directory for output files.
+ * The projector will be called "variants.tbl", the error file "errors.tbl", and the role-counts file "roleCounts.tbl".
  *
  * The command-line options are as follows:
  *
  * -h	display command-line usage
  * -v	display more detailed progress messages
  * -b	batch size for loading genomes (default 100)
- * -o	output file for subsystem definitions
  *
- * --errors			output file for bad features
- * --roleCounts		output file for role counts
+ * --clear	erase the output directory before processing
  *
  *  @author Bruce Parrello
  *
@@ -75,16 +72,22 @@ public class SubsystemProcessor extends BaseProcessor {
     protected static Logger log = LoggerFactory.getLogger(SubsystemProcessor.class);
     /** genome hash */
     private Map<String, Genome> genomeMap;
-    /** genome file hash */
-    private Map<String, File> fileMap;
     /** genome directory */
-    private GenomeDirectory genomes;
+    private GenomeSource genomes;
     /** subsystem information to be saved for projection */
     private SubsystemProjector projector;
     /** map of subsystem directories to subsystem specifiers */
     private Map<File, SubsystemSpec> subDirMap;
     /** list of analyzers to run */
     private List<SpreadsheetAnalyzer> analyzers;
+    /** bad-feature output file */
+    private File errorFile;
+    /** output file for role counts */
+    private File roleCountFile;
+    /** output file for projector */
+    private File projectorFile;
+    /** subsystem directory */
+    private File subsysDir;
 
     // COMMAND-LINE OPTIONS
 
@@ -92,52 +95,55 @@ public class SubsystemProcessor extends BaseProcessor {
     @Option(name = "-b", aliases = { "--batchSize", "--batch" }, metaVar = "50", usage = "number of genomes to process in each batch")
     private int batchSize;
 
-    /** subsystem projector output file */
-    @Option(name = "-o", aliases = { "--projector" }, metaVar = "variants.tbl",
-            usage = "optional output file for subsystem projection data")
-    private File projectorFile;
+    /** if specified, the output directory will be cleared before processing */
+    @Option(name = "--clear", usage = "if specified, the output directory will be erased before processing")
+    private boolean clearFlag;
 
-    /** bad-feature output file */
-    @Option(name = "--errors", metaVar = "errorFile.tbl", usage = "optional output file for bad feature list")
-    private File errorFile;
+    /** CoreSEED input directory */
+    @Argument(index = 0, metaVar = "FIGdisk/FIG/Data", usage = "main CoreSEED directory")
+    private File coreDir;
 
-    @Option(name = "--roleCounts", metaVar = "roleErrors.tbl", usage = "optional output file for bad-role counts")
-    private File roleCountFile;
-
-    /** genome directory */
-    @Argument(index = 0, metaVar = "gtoDir", usage = "input genome directory", required = true)
-    private File gtoDir;
-
-    /** subsystem directory */
-    @Argument(index = 1, metaVar = "FIG/Data/Subsystems", usage = "CoreSEED subsystem directory", required = true)
-    private File subsysDir;
+    /** output directory */
+    @Argument(index = 1, metaVar = "outDir", usage = "data file output directory")
+    private File outDir;
 
     @Override
     protected void setDefaults() {
         this.batchSize = 100;
-        this.projectorFile = null;
-        this.errorFile = null;
-        this.roleCountFile = null;
         this.analyzers = new ArrayList<SpreadsheetAnalyzer>(10);
+        this.clearFlag = false;
     }
 
     @Override
     protected boolean validateParms() throws IOException, ParseFailureException {
         if (this.batchSize < 1)
             throw new ParseFailureException("Invalid batch size.  Must be 1 or greater.");
+        if (! this.coreDir.isDirectory())
+            throw new FileNotFoundException("CoreSEED data directory " + this.coreDir + " not found or invalid.");
+        this.subsysDir = new File(this.coreDir, "Subsystems");
         if (! this.subsysDir.isDirectory())
             throw new FileNotFoundException("Subsystem directory " + this.subsysDir + " not found or invalid.");
-        if (! gtoDir.isDirectory())
-            throw new FileNotFoundException("GTO directory " + this.gtoDir + " not found or invalid.");
         // Here we get the input directory and create the genome map for storing batches.
-        log.info("Scanning input directory {}.", this.gtoDir);
-        this.genomes = new GenomeDirectory(gtoDir);
+        log.info("Scanning genome directory for {}.", this.coreDir);
+        this.genomes = GenomeSource.Type.CORE.create(this.coreDir);
         log.info("{} genomes found to process.  Batch size is {}.", this.genomes.size(), this.batchSize);
         this.genomeMap = new HashMap<String, Genome>(this.batchSize);
-        this.fileMap = new HashMap<String, File>(this.batchSize);
         // Create the subsystem projector and the directory map.
         this.projector = new SubsystemProjector();
         this.subDirMap = new HashMap<File, SubsystemSpec>();
+        // Set up the output directory.
+        if (! this.outDir.isDirectory()) {
+            log.info("Creating output directory {}.", this.outDir);
+            FileUtils.forceMkdir(this.outDir);
+        } else if (this.clearFlag) {
+            log.info("Erasing output directory {}.", this.outDir);
+            FileUtils.cleanDirectory(this.outDir);
+        } else
+            log.info("Output files will be stored in directory {}.", this.outDir);
+        // Compute the output files.
+        this.projectorFile = new File(this.outDir, "variants.tbl");
+        this.errorFile = new File(this.outDir, "errors.tbl");
+        this.roleCountFile = new File(this.outDir, "roleCounts.tbl");
         // Create the analyzers.
         this.analyzers.add(new ProjectionSpreadsheetAnalyzer(this.projector, this.projectorFile));
         if (this.errorFile != null)
@@ -202,17 +208,22 @@ public class SubsystemProcessor extends BaseProcessor {
             if (this.genomeMap.size() >= this.batchSize) {
                 this.processBatch();
                 this.genomeMap.clear();
-                this.fileMap.clear();
             }
             // Clear the existing subsystems and store the new genome in the maps.  The subsystems are
             // populated when we process the batch.
             genome.clearSubsystems();
             String genomeId = genome.getId();
             this.genomeMap.put(genomeId, genome);
-            this.fileMap.put(genomeId, genomes.currFile());
         }
         // Process the residual batch.
         this.processBatch();
+        // Write out an extra copy of the role map
+        log.info("Writing roles.in.subsystems.");
+        File roleFile = new File(this.outDir, "roles.in.subsystems");
+        this.projector.usefulRoles().save(roleFile);
+        // Write out a rule report.
+        File ruleFile = new File(this.outDir, "rules.txt");
+        this.projector.ruleReport(ruleFile);
         // Terminate the analyzers.
         for (SpreadsheetAnalyzer analyzer : this.analyzers)
             analyzer.close();
@@ -223,7 +234,9 @@ public class SubsystemProcessor extends BaseProcessor {
         // Create role maps for all the genomes.
         Map<String, Map<String, Set<String>>> gRoleMaps = new HashMap<>(this.batchSize);
         for (Map.Entry<String, Genome> genomeEntry : this.genomeMap.entrySet()) {
-            Map<String, Set<String>> roleMap = this.projector.computeRoleMap(genomeEntry.getValue());
+            final Genome genome = genomeEntry.getValue();
+            log.info("Computing role map for {}.", genome);
+            Map<String, Set<String>> roleMap = this.projector.computeRoleMap(genome);
             gRoleMaps.put(genomeEntry.getKey(), roleMap);
         }
         // Loop through the subsystems, finding the role bindings.
@@ -248,14 +261,6 @@ public class SubsystemProcessor extends BaseProcessor {
                     }
                 }
             }
-        }
-        // Finally, we save the genomes.
-        for (Map.Entry<String, Genome> genomeEntry : this.genomeMap.entrySet()) {
-            String genomeId = genomeEntry.getKey();
-            File outFile = this.fileMap.get(genomeId);
-            Genome genome = genomeEntry.getValue();
-            log.info("Saving {} to {}.", genome, outFile);
-            genome.save(outFile);
         }
 
     }
@@ -338,8 +343,38 @@ public class SubsystemProcessor extends BaseProcessor {
      *
      * @param subDir	subsystem directory of interest
      */
-    protected String dirToName(File subDir) {
-        return StringUtils.replace(subDir.getName(), "_", " ");
+    protected static String dirToName(File subDir) {
+        String name = subDir.getName();
+        final int n = name.length();
+        StringBuilder retVal = new StringBuilder(n);
+        // Loop through the name, converting the translated characters.
+        int i = 0;
+        while (i < n) {
+            char chr = name.charAt(i);
+            switch (chr) {
+            case '_' :
+                // Underscores are encoded from spaces.
+                retVal.append(' ');
+                i++;
+                break;
+            case '%' :
+                // Percent signs are used for hex encodings.
+                String hex = name.substring(i + 1, i + 3);
+                retVal.append((char) Integer.parseInt(hex, 16));
+                i += 3;
+                break;
+            default :
+                retVal.append(chr);
+                i++;
+            }
+        }
+        // Check for the pathological space trick.
+        int last = retVal.length() - 1;
+        while (last > 0 && retVal.charAt(last) == ' ') {
+            retVal.setCharAt(last, '_');
+            last--;
+        }
+        return retVal.toString();
     }
 
 
