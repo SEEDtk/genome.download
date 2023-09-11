@@ -58,7 +58,8 @@ public class SeedProcessor extends BaseProcessor implements FileTarget.IParms {
     /** output file target */
     private FileTarget outputFolder;
     /** list of subsystem file names */
-    private static final String[] SUBSYS_FILES = new String[] { "CLASSIFICATION", "EXCHANGABLE", "spreadsheet", "ERRORCOUNT", "curation.log" };
+    private static final String[] SUBSYS_FILES = new String[] { "CLASSIFICATION", "EXCHANGABLE", "spreadsheet"
+            , "ERRORCOUNT", "curation.log", "checkvariant_definitions", "checkvariant_rules", "VERSION", "notes" };
     /** list of genome file names */
     private static final String[] GENOME_FILES = new String[] {"contigs", "annotations", "GENOME", "TAXONOMY_ID", "TAXONOMY",
             "assigned_functions", "pattyfams.txt" };
