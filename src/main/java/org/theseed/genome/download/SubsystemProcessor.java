@@ -31,6 +31,7 @@ import org.theseed.subsystems.SubsystemProjector;
 import org.theseed.subsystems.SubsystemSpec;
 import org.theseed.subsystems.TrackingSpreadsheetAnalyzer;
 import org.theseed.subsystems.VariantId;
+import org.theseed.subsystems.core.CoreSubsystem;
 import org.theseed.subsystems.SubsystemFilter;
 import org.theseed.utils.BaseProcessor;
 import org.theseed.utils.ParseFailureException;
@@ -160,7 +161,7 @@ public class SubsystemProcessor extends BaseProcessor {
         log.info("{} subsystem directories found with spreadsheets.", subDirs.length);
         for (File subDir : subDirs) {
             // Compute the subsystem name from the directory.
-            String subName = dirToName(subDir);
+            String subName = CoreSubsystem.dirToName(subDir);
             File exchangeMarker = new File(subDir, "EXCHANGABLE");
             if (! exchangeMarker.exists()) {
                 log.info("Skipping private subsystem {}.", subName);
@@ -336,45 +337,6 @@ public class SubsystemProcessor extends BaseProcessor {
             if (line.contentEquals(SubsystemProjector.END_MARKER))
                 markersFound++;
         }
-    }
-
-    /**
-     * @return the name of the subsystem in the specified directory
-     *
-     * @param subDir	subsystem directory of interest
-     */
-    protected static String dirToName(File subDir) {
-        String name = subDir.getName();
-        final int n = name.length();
-        StringBuilder retVal = new StringBuilder(n);
-        // Loop through the name, converting the translated characters.
-        int i = 0;
-        while (i < n) {
-            char chr = name.charAt(i);
-            switch (chr) {
-            case '_' :
-                // Underscores are encoded from spaces.
-                retVal.append(' ');
-                i++;
-                break;
-            case '%' :
-                // Percent signs are used for hex encodings.
-                String hex = name.substring(i + 1, i + 3);
-                retVal.append((char) Integer.parseInt(hex, 16));
-                i += 3;
-                break;
-            default :
-                retVal.append(chr);
-                i++;
-            }
-        }
-        // Check for the pathological space trick.
-        int last = retVal.length() - 1;
-        while (last > 0 && retVal.charAt(last) == ' ') {
-            retVal.setCharAt(last, '_');
-            last--;
-        }
-        return retVal.toString();
     }
 
 
