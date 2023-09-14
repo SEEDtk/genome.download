@@ -54,6 +54,7 @@ import org.theseed.utils.ParseFailureException;
  *
  * The positional parameters are the name of the CoreSEED data directory and the name of the data directory for output files.
  * The projector will be called "variants.tbl", the error file "errors.tbl", and the role-counts file "roleCounts.tbl".
+ * In addition, a role definition file will be produced in "roles.in.subsystems".
  *
  * The command-line options are as follows:
  *
@@ -62,6 +63,7 @@ import org.theseed.utils.ParseFailureException;
  * -b	batch size for loading genomes (default 100)
  *
  * --clear	erase the output directory before processing
+ * --roles	an existing roles.in.subsystems file to pre-load
  *
  *  @author Bruce Parrello
  *
@@ -100,6 +102,10 @@ public class SubsystemProcessor extends BaseProcessor {
     @Option(name = "--clear", usage = "if specified, the output directory will be erased before processing")
     private boolean clearFlag;
 
+    /** if specified, a role definition file to pre-load (new roles found will be added) */
+    @Option(name = "--roles", usage = "option role definition file to pre-load")
+    private File roleFile;
+
     /** CoreSEED input directory */
     @Argument(index = 0, metaVar = "FIGdisk/FIG/Data", usage = "main CoreSEED directory")
     private File coreDir;
@@ -113,6 +119,7 @@ public class SubsystemProcessor extends BaseProcessor {
         this.batchSize = 100;
         this.analyzers = new ArrayList<SpreadsheetAnalyzer>(10);
         this.clearFlag = false;
+        this.roleFile = null;
     }
 
     @Override
@@ -130,7 +137,7 @@ public class SubsystemProcessor extends BaseProcessor {
         log.info("{} genomes found to process.  Batch size is {}.", this.genomes.size(), this.batchSize);
         this.genomeMap = new HashMap<String, Genome>(this.batchSize);
         // Create the subsystem projector and the directory map.
-        this.projector = new SubsystemProjector();
+        this.projector = new SubsystemProjector(this.roleFile);
         this.subDirMap = new HashMap<File, SubsystemSpec>();
         // Set up the output directory.
         if (! this.outDir.isDirectory()) {
@@ -147,10 +154,8 @@ public class SubsystemProcessor extends BaseProcessor {
         this.roleCountFile = new File(this.outDir, "roleCounts.tbl");
         // Create the analyzers.
         this.analyzers.add(new ProjectionSpreadsheetAnalyzer(this.projector, this.projectorFile));
-        if (this.errorFile != null)
-            this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.projector, this.errorFile));
-        if (this.roleCountFile != null)
-            this.analyzers.add(new CountingSpreadsheetAnalyzer(this.projector, this.roleCountFile));
+        this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.projector, this.errorFile));
+        this.analyzers.add(new CountingSpreadsheetAnalyzer(this.projector, this.roleCountFile));
         return true;
     }
 
