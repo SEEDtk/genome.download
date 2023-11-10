@@ -12,12 +12,12 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
+import org.theseed.basic.ParseFailureException;
 import org.theseed.p3api.Criterion;
 import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.P3Connection.Table;
 import org.theseed.subsystems.SubsystemIdMap;
-import org.theseed.utils.BaseProcessor;
-import org.theseed.utils.ParseFailureException;
 
 /**
  * This command creates or updates a subsystem map.  A subsystem map is a simple two-column table that assigns an abbreviated

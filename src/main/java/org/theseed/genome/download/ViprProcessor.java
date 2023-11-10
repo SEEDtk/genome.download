@@ -10,10 +10,8 @@ import java.util.Collection;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
-import org.theseed.utils.BaseProcessor;
-
 import org.apache.commons.io.FileUtils;
-
+import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.ViprGenome;
 
 /**

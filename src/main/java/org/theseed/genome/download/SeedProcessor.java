@@ -8,10 +8,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.core.OrganismDirectories;
 import org.theseed.io.FileTarget;
 import org.theseed.subsystems.SubsystemFilter;
-import org.theseed.utils.BaseProcessor;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.Argument;
 import org.apache.commons.lang3.StringUtils;

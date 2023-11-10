@@ -10,12 +10,12 @@ import java.util.TreeSet;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.ParseFailureException;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.SequenceReader;
 import org.theseed.sequence.FastaOutputStream;
 import org.theseed.utils.BaseInputProcessor;
-import org.theseed.utils.ParseFailureException;
 
 /**
  * This command downloads genome FASTA files from PATRIC into a single file.  It reads a file of genome IDs

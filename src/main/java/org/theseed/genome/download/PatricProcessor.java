@@ -10,13 +10,13 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
+import org.theseed.basic.BaseProcessor;
+import org.theseed.basic.ICommand;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.p3api.P3SubsystemProjector;
 import org.theseed.subsystems.SubsystemProjector;
-import org.theseed.utils.BaseProcessor;
-import org.theseed.utils.ICommand;
 
 /**
 /**

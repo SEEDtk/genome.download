@@ -12,11 +12,11 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.Genome;
 import org.theseed.genome.core.CoreGenome;
 import org.theseed.genome.core.OrganismDirectories;
 import org.theseed.p3api.P3Connection;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * This command reads genomes from a SEED organism directory.  The positional parameters are the name of the input directory

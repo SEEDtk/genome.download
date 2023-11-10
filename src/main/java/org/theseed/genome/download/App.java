@@ -2,7 +2,7 @@ package org.theseed.genome.download;
 
 import java.util.Arrays;
 
-import org.theseed.utils.BaseProcessor;
+import org.theseed.basic.BaseProcessor;
 
 /**
  * Download genomes into genome directories.

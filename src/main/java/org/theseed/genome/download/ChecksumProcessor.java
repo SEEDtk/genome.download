@@ -18,10 +18,10 @@ import java.util.stream.Stream;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
+import org.theseed.basic.BaseProcessor;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.sequence.FastaInputStream;
 import org.theseed.sequence.MD5Hex;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * This command reads FASTA files and computes MD5 checksums.  A master list of genomes can be provided, in which

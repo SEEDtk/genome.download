@@ -12,10 +12,10 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
 import org.theseed.subsystems.SubsystemProjector;
-import org.theseed.utils.BaseProcessor;
 
 /**
  * This command projects subsystems onto existing GTOs.  The positional parameters are the name of the subsystem projection

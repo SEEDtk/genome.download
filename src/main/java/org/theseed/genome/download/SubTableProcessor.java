@@ -10,10 +10,10 @@ import java.io.IOException;
 import org.kohsuke.args4j.Argument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
+import org.theseed.basic.ParseFailureException;
 import org.theseed.genome.Genome;
 import org.theseed.subsystems.SubsystemRowDescriptor;
-import org.theseed.utils.BaseProcessor;
-import org.theseed.utils.ParseFailureException;
 
 /**
  * This command reads a genome file and produces a table of subsystem information as output.  The table can be read

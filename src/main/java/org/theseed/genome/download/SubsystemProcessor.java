@@ -18,6 +18,8 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.theseed.basic.BaseProcessor;
+import org.theseed.basic.ParseFailureException;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
 import org.theseed.genome.iterator.GenomeSource;
@@ -33,8 +35,6 @@ import org.theseed.subsystems.TrackingSpreadsheetAnalyzer;
 import org.theseed.subsystems.VariantId;
 import org.theseed.subsystems.core.CoreSubsystem;
 import org.theseed.subsystems.SubsystemFilter;
-import org.theseed.utils.BaseProcessor;
-import org.theseed.utils.ParseFailureException;
 
 /**
  * This command processes a CoreSEED data directory and computes the subsystem projector.
