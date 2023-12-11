@@ -6,6 +6,7 @@ package org.theseed.genome.download;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +55,8 @@ import org.theseed.subsystems.SubsystemFilter;
  *
  * The positional parameters are the name of the CoreSEED data directory and the name of the data directory for output files.
  * The projector will be called "variants.tbl", the error file "errors.tbl", and the role-counts file "roleCounts.tbl".
- * In addition, a role definition file will be produced in "roles.in.subsystems".
+ * In addition, a role definition file will be produced in "roles.in.subsystems", and a list of complete genomes in
+ * "complete.tbl".
  *
  * The command-line options are as follows:
  *
@@ -89,6 +91,8 @@ public class SubsystemProcessor extends BaseProcessor {
     private File roleCountFile;
     /** output file for projector */
     private File projectorFile;
+    /** output file for complete-genome list */
+    private File completeFile;
     /** subsystem directory */
     private File subsysDir;
 
@@ -152,6 +156,7 @@ public class SubsystemProcessor extends BaseProcessor {
         this.projectorFile = new File(this.outDir, "variants.tbl");
         this.errorFile = new File(this.outDir, "errors.tbl");
         this.roleCountFile = new File(this.outDir, "roleCounts.tbl");
+        this.completeFile = new File(this.outDir, "complete.tbl");
         // Create the analyzers.
         this.analyzers.add(new ProjectionSpreadsheetAnalyzer(this.projector, this.projectorFile));
         this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.projector, this.errorFile));
@@ -208,21 +213,27 @@ public class SubsystemProcessor extends BaseProcessor {
                 }
             }
         }
-        // Now we load the genomes in batches and process them.
-        for (Genome genome : this.genomes) {
-            // Insure there is room for another genome.
-            if (this.genomeMap.size() >= this.batchSize) {
-                this.processBatch();
-                this.genomeMap.clear();
+        // Now we load the genomes in batches and process them.  We also generate the complete-genome
+        // list here.
+        try (PrintWriter writer = new PrintWriter(this.completeFile)) {
+            writer.println("genome_id\tgenome_name");
+            for (Genome genome : this.genomes) {
+                // Insure there is room for another genome.
+                if (this.genomeMap.size() >= this.batchSize) {
+                    this.processBatch();
+                    this.genomeMap.clear();
+                }
+                // Clear the existing subsystems and store the new genome in the maps.  The subsystems are
+                // populated when we process the batch.
+                genome.clearSubsystems();
+                String genomeId = genome.getId();
+                this.genomeMap.put(genomeId, genome);
+                if (genome.isComplete())
+                    writer.println(genomeId + "\t" + genome.getName());
             }
-            // Clear the existing subsystems and store the new genome in the maps.  The subsystems are
-            // populated when we process the batch.
-            genome.clearSubsystems();
-            String genomeId = genome.getId();
-            this.genomeMap.put(genomeId, genome);
+            // Process the residual batch.
+            this.processBatch();
         }
-        // Process the residual batch.
-        this.processBatch();
         // Write out an extra copy of the role map
         log.info("Writing roles.in.subsystems.");
         File roleFile = new File(this.outDir, "roles.in.subsystems");
