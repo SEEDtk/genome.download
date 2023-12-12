@@ -93,6 +93,8 @@ public class SubsystemProcessor extends BaseProcessor {
     private File projectorFile;
     /** output file for complete-genome list */
     private File completeFile;
+    /** output file for blank annotations */
+    private File blankFile;
     /** subsystem directory */
     private File subsysDir;
 
@@ -157,6 +159,7 @@ public class SubsystemProcessor extends BaseProcessor {
         this.errorFile = new File(this.outDir, "errors.tbl");
         this.roleCountFile = new File(this.outDir, "roleCounts.tbl");
         this.completeFile = new File(this.outDir, "complete.tbl");
+        this.blankFile = new File(this.outDir, "blank.tbl");
         // Create the analyzers.
         this.analyzers.add(new ProjectionSpreadsheetAnalyzer(this.projector, this.projectorFile));
         this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.projector, this.errorFile));
@@ -214,9 +217,11 @@ public class SubsystemProcessor extends BaseProcessor {
             }
         }
         // Now we load the genomes in batches and process them.  We also generate the complete-genome
-        // list here.
-        try (PrintWriter writer = new PrintWriter(this.completeFile)) {
-            writer.println("genome_id\tgenome_name");
+        // list and blank-annotation list here.
+        try (PrintWriter completeWriter = new PrintWriter(this.completeFile);
+                PrintWriter blankWriter = new PrintWriter(this.blankFile)) {
+            completeWriter.println("genome_id\tgenome_name");
+            blankWriter.println("genome_id\tfeature_id\tgenome_name");
             for (Genome genome : this.genomes) {
                 // Insure there is room for another genome.
                 if (this.genomeMap.size() >= this.batchSize) {
@@ -226,10 +231,17 @@ public class SubsystemProcessor extends BaseProcessor {
                 // Clear the existing subsystems and store the new genome in the maps.  The subsystems are
                 // populated when we process the batch.
                 genome.clearSubsystems();
+                // Do the completeness check.
                 String genomeId = genome.getId();
+                String genomeName = genome.getName();
                 this.genomeMap.put(genomeId, genome);
                 if (genome.isComplete())
-                    writer.println(genomeId + "\t" + genome.getName());
+                    completeWriter.println(genomeId + "\t" + genomeName);
+                // Scan for features with missing annotations.
+                for (Feature feat : genome.getPegs()) {
+                    if (StringUtils.isBlank(feat.getFunction()))
+                        blankWriter.println(genomeId + "\t" + feat.getId() + "\t" + genomeName);
+                }
             }
             // Process the residual batch.
             this.processBatch();
