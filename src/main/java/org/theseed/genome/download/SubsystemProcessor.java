@@ -35,7 +35,6 @@ import org.theseed.subsystems.SubsystemSpec;
 import org.theseed.subsystems.TrackingSpreadsheetAnalyzer;
 import org.theseed.subsystems.VariantId;
 import org.theseed.subsystems.core.CoreSubsystem;
-import org.theseed.subsystems.SubsystemFilter;
 
 /**
  * This command processes a CoreSEED data directory and computes the subsystem projector.
@@ -64,8 +63,9 @@ import org.theseed.subsystems.SubsystemFilter;
  * -v	display more detailed progress messages
  * -b	batch size for loading genomes (default 100)
  *
- * --clear	erase the output directory before processing
- * --roles	an existing roles.in.subsystems file to pre-load
+ * --clear		erase the output directory before processing
+ * --roles		an existing roles.in.subsystems file to pre-load
+ * --filter		if specified, a file of subsystem names; only the named subsystems will be checked
  *
  *  @author Bruce Parrello
  *
@@ -112,6 +112,10 @@ public class SubsystemProcessor extends BaseProcessor {
     @Option(name = "--roles", usage = "option role definition file to pre-load")
     private File roleFile;
 
+    /** if specified, the name of a file containing subsystem names in the first column; only the named subsystems will be checked */
+    @Option(name = "--filter", metaVar = "ssNames.tbl", usage = "file of subsystem names to check (tab-separated with headers)")
+    private File filterFile;
+
     /** CoreSEED input directory */
     @Argument(index = 0, metaVar = "FIGdisk/FIG/Data", usage = "main CoreSEED directory")
     private File coreDir;
@@ -126,6 +130,7 @@ public class SubsystemProcessor extends BaseProcessor {
         this.analyzers = new ArrayList<SpreadsheetAnalyzer>(10);
         this.clearFlag = false;
         this.roleFile = null;
+        this.filterFile = null;
     }
 
     @Override
@@ -170,8 +175,8 @@ public class SubsystemProcessor extends BaseProcessor {
     @Override
     protected void runCommand() throws Exception {
         // We loop through the subsystems, memorizing the classifications.
-        File[] subDirs = this.subsysDir.listFiles(new SubsystemFilter());
-        log.info("{} subsystem directories found with spreadsheets.", subDirs.length);
+        List<File> subDirs = CoreSubsystem.getFilteredSubsystemDirectories(this.coreDir, this.filterFile);
+        log.info("{} subsystem directories found with spreadsheets.", subDirs.size());
         for (File subDir : subDirs) {
             // Compute the subsystem name from the directory.
             String subName = CoreSubsystem.dirToName(subDir);
