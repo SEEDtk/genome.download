@@ -22,6 +22,7 @@ import org.theseed.basic.BaseProcessor;
  * list			list the IDs of all the genomes in a genome source
  * sync			synchronize a genome target with a list of PATRIC genome IDs
  * subMap		create a map from subsystem IDs to subsystem names
+ * sraMap		list SRA samples corresponding to PATRIC genomes
  *
  */
 public class App
@@ -77,6 +78,9 @@ public class App
             break;
         case "subMap" :
             processor = new SubMapProcesor();
+            break;
+        case "sraMap" :
+            processor = new SraMapProcessor();
             break;
         default:
             throw new RuntimeException("Invalid command " + command);
