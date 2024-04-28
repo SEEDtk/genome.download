@@ -6,10 +6,10 @@ package org.theseed.genome.download;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -37,11 +37,11 @@ import com.github.cliftonlabs.json_simple.JsonObject;
  * This is a tricky business.  The PATRIC database will give us a comma-delimited list of run accession
  * IDs.  The NCBI service will return an XML document containing experiments.  We need to find the
  * run IDs in the experiment descriptions and connect them back to the PATRIC IDs.  We can then
- * produce a report showing the genome ID, name, and experiment ID.
+ * produce a report showing the genome ID, name, and sample ID.
  *
- * Many of the run accession numbers listed in PATRIC will not exist in the NCBI any more.  In that
- * case, the genome will not be output.  The result is that the output file can be fed into a batch
- * process for downloading samples with little extra work.
+ * Many of the run accession numbers listed in PATRIC will not exist in the NCBI any more, or will connect
+ * to the wrong experiments.  In that case, the genome will not be output.  The result is that the output
+ * file can be fed into a batch process for downloading samples with little extra work.
  *
  * The genome IDs should come from the standard input and the report will be produced on the standard
  * output.  By default, the genome IDs will be presumed to be in the first column of the input, which
@@ -53,7 +53,7 @@ import com.github.cliftonlabs.json_simple.JsonObject;
  * -v	display more frequent log messages
  * -i	input file containing genome IDs (if not STDIN)
  * -o	output file for report (if not STDOUT)
- * -b	batch size for PATRIC queries (default 50)
+ * -b	batch size for PATRIC queries (default 200)
  * -c	index (1-based) or name of input column with genome IDs (default "1")
  *
  * @author Bruce Parrello
@@ -80,13 +80,17 @@ public class SraMapProcessor extends BasePipeProcessor {
     private NcbiListQuery runQuery;
     /** number of genomes without SRA data */
     private int runlessCount;
-    /** number of experiments found */
-    private int expCount;
+    /** number of runs found */
+    private int runCount;
+    /** number of samples found */
+    private int sampleCount;
+    /** empty string set */
+    private static final Set<String> EMPTY_SET = Collections.emptySet();
 
     // COMMAND-LINE OPTIONS
 
     /** PATRIC query batch size */
-    @Option(name = "--batchSize", aliases = { "-b" }, metaVar = "100", usage = "batch size for PATRIC queries")
+    @Option(name = "--batchSize", aliases = { "-b" }, metaVar = "50", usage = "batch size for PATRIC queries")
     private int batchSize;
 
     /** input column identifier */
@@ -96,7 +100,7 @@ public class SraMapProcessor extends BasePipeProcessor {
 
     @Override
     protected void setPipeDefaults() {
-        this.batchSize = 50;
+        this.batchSize = 200;
         this.inCol = "1";
     }
 
@@ -124,12 +128,13 @@ public class SraMapProcessor extends BasePipeProcessor {
     @Override
     protected void runPipeline(TabbedLineReader inputStream, PrintWriter writer) throws Exception {
         // Write the output header.
-        writer.println("genome_id\tgenome_name\tsrx_id");
+        writer.println("genome_id\tgenome_name\tsample_id\truns");
         // Initialize the counters.
         int lineIn = 0;
         int batchCount = 0;
         this.runlessCount = 0;
-        this.expCount = 0;
+        this.runCount = 0;
+        this.sampleCount = 0;
         // Loop through the input stream, forming batches.
         for (var line : inputStream) {
             String genome_id = line.get(this.idColIdx);
@@ -142,7 +147,7 @@ public class SraMapProcessor extends BasePipeProcessor {
                 this.batch.clear();
                 this.runMap.clear();
                 this.nameMap.clear();
-                log.info("{} total genomes processed.  {} experiments found.", lineIn, this.expCount);
+                log.info("{} total genomes processed.  {} runs found.", lineIn, this.runCount);
             }
             // Add the new genome ID to the batch.
             this.batch.add(genome_id);
@@ -152,8 +157,8 @@ public class SraMapProcessor extends BasePipeProcessor {
             this.processBatch(writer);
         }
         log.info("{} lines read, {} batches processed.", lineIn, batchCount);
-        log.info("{} genomes had no SRA data.  {} total experiments found.", this.runlessCount,
-                this.expCount);
+        log.info("{} genomes had no SRA data.  {} total runs found in {} samples.", this.runlessCount,
+                this.runCount, this.sampleCount);
     }
 
     /**
@@ -192,34 +197,41 @@ public class SraMapProcessor extends BasePipeProcessor {
         // Now we must ask NCBI for information about the runs.  Many of the runs will not
         // be found, but the rest will be output.
         this.runQuery.addIds(this.runMap.keySet());
-        var elements = this.ncbi.query(runQuery);
+        var elements = runQuery.run(this.ncbi);
         log.info("{} experiments returned from NCBI query.", elements.size());
         // For each element returned, we need to find the runs.  This determines the relevant genome.
-        // The elements returned are EXPERIMENT_PACKAGE tags.
+        // The elements returned are EXPERIMENT_PACKAGE tags.  Each package has a sample ID.  We
+        // collect the sample IDs for each genome, and runs for each sample.
+        final int hashSize = elements.size() * 4 / 3 + 1;
+        Map<String, Set<String>> genomeSamples = new HashMap<String, Set<String>>(hashSize);
+        Map<String, Set<String>> sampleRuns = new HashMap<String, Set<String>>(hashSize);
         for (Element element : elements) {
-            Element experimentData = XmlUtils.getFirstByTagName(element, "EXPERMENT");
-            String experimentId = experimentData.getAttribute("accession");
+            Element sampleData = XmlUtils.getFirstByTagName(element, "SAMPLE");
+            String sampleId = sampleData.getAttribute("accession");
             Element runSet = XmlUtils.getFirstByTagName(element, "RUN_SET");
-            // The runs are children of the run set.  We create a set of the genomes found for the runs.
-            NavigableSet<String> genomeIds = new TreeSet<String>();
+            // The runs are children of the run set.  We output the runs corresponding to our genomes.
             Collection<Element> runList = XmlUtils.descendantsOf(runSet, "RUN");
             for (Element runData : runList) {
                 String runId = runData.getAttribute("accession");
                 String genomeId = this.runMap.get(runId);
-                if (genomeId != null)
-                    genomeIds.add(runId);
+                if (genomeId != null) {
+                    // Here this sample is associated with a genome, so we put it in the maps.
+                    Set<String> samples = genomeSamples.computeIfAbsent(genomeId, x -> new TreeSet<String>());
+                    samples.add(sampleId);
+                    Set<String> runs = sampleRuns.computeIfAbsent(sampleId, x -> new TreeSet<String>());
+                    runs.add(runId);
+                    this.runCount++;
+                }
             }
-            // There should be exactly one genome ID in the output set.
-            if (genomeIds.size() == 0)
-                log.error("No genomes found for runs in {}.", experimentId);
-            else if (genomeIds.size() > 1)
-                log.error("Genome association for runs in {} is ambiguous.", experimentId);
-            else {
-                // Here we have output to write.
-                this.expCount++;
-                String genomeId = genomeIds.first();
-                writer.println(genomeId + "\t" + this.nameMap.getOrDefault(genomeId, "unknown")
-                        + "\t" + experimentId);
+        }
+        // Now unspool the sample / genome data.
+        for (var sampleEntry : genomeSamples.entrySet()) {
+            String genomeId = sampleEntry.getKey();
+            String genomeName = this.nameMap.getOrDefault(genomeId, "<<unknown>>");
+            for (String sampleId : sampleEntry.getValue()) {
+                String runs = StringUtils.join(sampleRuns.getOrDefault(sampleId, EMPTY_SET), ",");
+                writer.println(genomeId + "\t" + genomeName + "\t" + sampleId + "\t" + runs);
+                this.sampleCount++;
             }
         }
     }
