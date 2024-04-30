@@ -194,44 +194,49 @@ public class SraMapProcessor extends BasePipeProcessor {
             }
         }
         log.info("{} runs found for {} genomes.", this.runMap.size(), this.nameMap.size());
-        // Now we must ask NCBI for information about the runs.  Many of the runs will not
-        // be found, but the rest will be output.
-        this.runQuery.addIds(this.runMap.keySet());
-        var elements = runQuery.run(this.ncbi);
-        log.info("{} experiments returned from NCBI query.", elements.size());
-        // For each element returned, we need to find the runs.  This determines the relevant genome.
-        // The elements returned are EXPERIMENT_PACKAGE tags.  Each package has a sample ID.  We
-        // collect the sample IDs for each genome, and runs for each sample.
-        final int hashSize = elements.size() * 4 / 3 + 1;
-        Map<String, Set<String>> genomeSamples = new HashMap<String, Set<String>>(hashSize);
-        Map<String, Set<String>> sampleRuns = new HashMap<String, Set<String>>(hashSize);
-        for (Element element : elements) {
-            Element sampleData = XmlUtils.getFirstByTagName(element, "SAMPLE");
-            String sampleId = sampleData.getAttribute("accession");
-            Element runSet = XmlUtils.getFirstByTagName(element, "RUN_SET");
-            // The runs are children of the run set.  We output the runs corresponding to our genomes.
-            Collection<Element> runList = XmlUtils.descendantsOf(runSet, "RUN");
-            for (Element runData : runList) {
-                String runId = runData.getAttribute("accession");
-                String genomeId = this.runMap.get(runId);
-                if (genomeId != null) {
-                    // Here this sample is associated with a genome, so we put it in the maps.
-                    Set<String> samples = genomeSamples.computeIfAbsent(genomeId, x -> new TreeSet<String>());
-                    samples.add(sampleId);
-                    Set<String> runs = sampleRuns.computeIfAbsent(sampleId, x -> new TreeSet<String>());
-                    runs.add(runId);
-                    this.runCount++;
+        // Only proceed if we found at least one run.
+        if (this.runMap.isEmpty())
+            log.info("No runs.  Skipping NCBI query.");
+        else {
+            // Now we must ask NCBI for information about the runs.  Many of the runs will not
+            // be found, but the rest will be output.
+            this.runQuery.addIds(this.runMap.keySet());
+            var elements = runQuery.run(this.ncbi);
+            log.info("{} experiments returned from NCBI query.", elements.size());
+            // For each element returned, we need to find the runs.  This determines the relevant genome.
+            // The elements returned are EXPERIMENT_PACKAGE tags.  Each package has a sample ID.  We
+            // collect the sample IDs for each genome, and runs for each sample.
+            final int hashSize = elements.size() * 4 / 3 + 1;
+            Map<String, Set<String>> genomeSamples = new HashMap<String, Set<String>>(hashSize);
+            Map<String, Set<String>> sampleRuns = new HashMap<String, Set<String>>(hashSize);
+            for (Element element : elements) {
+                Element sampleData = XmlUtils.getFirstByTagName(element, "SAMPLE");
+                String sampleId = sampleData.getAttribute("accession");
+                Element runSet = XmlUtils.getFirstByTagName(element, "RUN_SET");
+                // The runs are children of the run set.  We output the runs corresponding to our genomes.
+                Collection<Element> runList = XmlUtils.descendantsOf(runSet, "RUN");
+                for (Element runData : runList) {
+                    String runId = runData.getAttribute("accession");
+                    String genomeId = this.runMap.get(runId);
+                    if (genomeId != null) {
+                        // Here this sample is associated with a genome, so we put it in the maps.
+                        Set<String> samples = genomeSamples.computeIfAbsent(genomeId, x -> new TreeSet<String>());
+                        samples.add(sampleId);
+                        Set<String> runs = sampleRuns.computeIfAbsent(sampleId, x -> new TreeSet<String>());
+                        runs.add(runId);
+                        this.runCount++;
+                    }
                 }
             }
-        }
-        // Now unspool the sample / genome data.
-        for (var sampleEntry : genomeSamples.entrySet()) {
-            String genomeId = sampleEntry.getKey();
-            String genomeName = this.nameMap.getOrDefault(genomeId, "<<unknown>>");
-            for (String sampleId : sampleEntry.getValue()) {
-                String runs = StringUtils.join(sampleRuns.getOrDefault(sampleId, EMPTY_SET), ",");
-                writer.println(genomeId + "\t" + genomeName + "\t" + sampleId + "\t" + runs);
-                this.sampleCount++;
+            // Now unspool the sample / genome data.
+            for (var sampleEntry : genomeSamples.entrySet()) {
+                String genomeId = sampleEntry.getKey();
+                String genomeName = this.nameMap.getOrDefault(genomeId, "<<unknown>>");
+                for (String sampleId : sampleEntry.getValue()) {
+                    String runs = StringUtils.join(sampleRuns.getOrDefault(sampleId, EMPTY_SET), ",");
+                    writer.println(genomeId + "\t" + genomeName + "\t" + sampleId + "\t" + runs);
+                    this.sampleCount++;
+                }
             }
         }
     }
