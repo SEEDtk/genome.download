@@ -27,6 +27,26 @@ import org.theseed.basic.BaseProcessor;
  */
 public class App
 {
+    /** static array containing command names and comments */
+    protected static final String[] COMMANDS = new String[] {
+             "subTable", "create a subsystem directory file for a genome",
+             "fasta", "download a FASTA file from the PATRIC website",
+             "fastaDir", "download a directory of FASTA files from the PATRIC website",
+             "vipr", "create the genomes from ViPR download files",
+             "patric", "download the genomes from the PATRIC website",
+             "core", "extract genomes from a SEED organism directory",
+             "ncbi", "create a genome from NCBI download files",
+             "md5", "compute MD5s from FASTA files",
+             "subsystems", "compute a subsystem projector for the CoreSEED",
+             "seed", "compress the SEED into an output file",
+             "project", "project subsystems onto GTOs",
+             "copy", "copy genomes from a source to a local directory",
+             "list", "list the IDs of all the genomes in a genome source",
+             "sync", "synchronize a genome target with a list of PATRIC genome IDs",
+             "subMap", "create a map from subsystem IDs to subsystem names",
+             "sraMap", "list SRA samples corresponding to PATRIC genomes",
+    };
+
     public static void main( String[] args ) {
         // Get the control parameter.
         String command = args[0];
@@ -82,13 +102,20 @@ public class App
         case "sraMap" :
             processor = new SraMapProcessor();
             break;
-        default:
-            throw new RuntimeException("Invalid command " + command);
+        case "-h" :
+        case "--help" :
+            processor = null;
+            break;
+        default :
+            throw new RuntimeException("Invalid command " + command + ".");
         }
-        // Process it.
-        boolean ok = processor.parseCommand(newArgs);
-        if (ok) {
-            processor.run();
+        if (processor == null)
+            BaseProcessor.showCommands(COMMANDS);
+        else {
+            boolean ok = processor.parseCommand(newArgs);
+            if (ok) {
+                processor.run();
+            }
         }
     }
 }
