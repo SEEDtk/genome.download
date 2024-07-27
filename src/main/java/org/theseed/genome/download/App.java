@@ -23,6 +23,7 @@ import org.theseed.basic.BaseProcessor;
  * sync			synchronize a genome target with a list of PATRIC genome IDs
  * subMap		create a map from subsystem IDs to subsystem names
  * sraMap		list SRA samples corresponding to PATRIC genomes
+ * sraFasta		create a FASTA pseudo-sample directory from sraMap output
  *
  */
 public class App
@@ -45,6 +46,7 @@ public class App
              "sync", "synchronize a genome target with a list of PATRIC genome IDs",
              "subMap", "create a map from subsystem IDs to subsystem names",
              "sraMap", "list SRA samples corresponding to PATRIC genomes",
+             "sraFasta", "create a FASTA pseudo-sample directory from sraMap output"
     };
 
     public static void main( String[] args ) {
@@ -101,6 +103,9 @@ public class App
             break;
         case "sraMap" :
             processor = new SraMapProcessor();
+            break;
+        case "sraFasta" :
+            processor = new SraFastaProcessor();
             break;
         case "-h" :
         case "--help" :
