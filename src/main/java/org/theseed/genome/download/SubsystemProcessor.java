@@ -66,6 +66,7 @@ import org.theseed.subsystems.core.CoreSubsystem;
  * --clear		erase the output directory before processing
  * --roles		an existing roles.in.subsystems file to pre-load
  * --filter		if specified, a file of subsystem names; only the named subsystems will be checked
+ * --save		if specified, the name of a directory in which to store GTOs for the CoreSEED
  *
  *  @author Bruce Parrello
  *
@@ -116,6 +117,10 @@ public class SubsystemProcessor extends BaseProcessor {
     @Option(name = "--filter", metaVar = "ssNames.tbl", usage = "file of subsystem names to check (tab-separated with headers)")
     private File filterFile;
 
+    /** if specified, the name of a directory to contain GTOs for the CoreSEED genomes */
+    @Option(name = "--save", metaVar = "coreGtoDir", usage = "optional output directory for CoreSEED GTOs; always erased")
+    private File coreGtoDir;
+
     /** CoreSEED input directory */
     @Argument(index = 0, metaVar = "FIGdisk/FIG/Data", usage = "main CoreSEED directory")
     private File coreDir;
@@ -131,6 +136,7 @@ public class SubsystemProcessor extends BaseProcessor {
         this.clearFlag = false;
         this.roleFile = null;
         this.filterFile = null;
+        this.coreGtoDir = null;
     }
 
     @Override
@@ -159,6 +165,17 @@ public class SubsystemProcessor extends BaseProcessor {
             FileUtils.cleanDirectory(this.outDir);
         } else
             log.info("Output files will be stored in directory {}.", this.outDir);
+        // Set up the optional output directory for CoreSEED GTOs.
+        if (this.coreGtoDir != null) {
+            // Here we need to set up the output directory for the CoreSEED GTOs.
+            if (! this.coreGtoDir.isDirectory()) {
+                log.info("Creating GTO output directory {}.", this.coreGtoDir);
+                FileUtils.forceMkdir(this.coreGtoDir);
+            } else {
+                log.info("Erasing GTO output directory {}.", this.coreGtoDir);
+                FileUtils.cleanDirectory(this.coreGtoDir);
+            }
+        }
         // Compute the output files.
         this.projectorFile = new File(this.outDir, "variants.tbl");
         this.errorFile = new File(this.outDir, "errors.tbl");
@@ -296,7 +313,15 @@ public class SubsystemProcessor extends BaseProcessor {
                 }
             }
         }
-
+        // Check to see if we need to write out the genomes.
+        if (this.coreGtoDir != null) {
+            log.info("Preparing to save {} genomes to {}.", this.genomeMap.size(), this.coreGtoDir);
+            for (Genome genome : this.genomeMap.values()) {
+                File outFile = new File(this.coreGtoDir, genome.getId() + ".gto");
+                log.info("Saving genome to {}.", outFile);
+                genome.save(outFile);
+            }
+        }
     }
 
     /**
