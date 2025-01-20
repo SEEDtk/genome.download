@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Set;
 
+
 import org.theseed.genome.Feature;
+import org.theseed.genome.Genome;
 
 /**
  * This analyzer projects the subsystems into the genomes and optionally writes the projector to a file.
@@ -97,6 +99,8 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         // recognize that if it is found somewhere else, it is a valid variant.
         this.goodVariant = false;
         activateCell(idx);
+        log.info("Bad variant {} found due to missing role \"{}\". Original feature was {} ({}).",
+                this.variant, roleDesc, feat.getId(), feat.getPegFunction());
     }
 
     @Override
@@ -107,8 +111,10 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         if (isNew) this.specCount++;
         if (this.goodVariant) {
             // Here we can store it in the genome.
-            this.variant.instantiate(this.getGenome(), this.getRoleMap());
+            Genome genome = this.getGenome();
+            this.variant.instantiate(genome, this.getRoleMap());
             this.storedCount++;
+            log.debug("Good variant {} stored in {}.", this.variant, genome);
         }
     }
 
