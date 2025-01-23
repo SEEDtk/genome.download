@@ -56,8 +56,8 @@ import org.theseed.subsystems.core.SubsystemRuleProjector;
  *
  * The positional parameters are the name of the CoreSEED data directory and the name of the data directory for output files.
  * The projector will be called "variants.ser", the error file "errors.tbl", and the role-counts file "roleCounts.tbl".
- * In addition, a role definition file will be produced in "subsystem.roles", and a list of complete genomes in
- * "complete.tbl".
+ * In addition, a role definition file will be produced in "subsystem.roles", a list of complete genomes in
+ * "complete.tbl", and a list of subsystems whose rules had to be generated in "generated.tbl".
  *
  * The command-line options are as follows:
  *
@@ -102,6 +102,8 @@ public class SubsystemProcessor extends BaseProcessor {
     private File blankFile;
     /** subsystem directory */
     private File subsysDir;
+    /** output file for generated-rules list */
+    private File generatedFile;
 
     // COMMAND-LINE OPTIONS
 
@@ -186,6 +188,7 @@ public class SubsystemProcessor extends BaseProcessor {
         this.roleCountFile = new File(this.outDir, "roleCounts.tbl");
         this.completeFile = new File(this.outDir, "complete.tbl");
         this.blankFile = new File(this.outDir, "blank.tbl");
+        this.generatedFile = new File(this.outDir, "generated.tbl");
         // Create the analyzers.
         this.analyzers.add(new ProjectionSpreadsheetAnalyzer());
         this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.errorFile));
@@ -246,18 +249,26 @@ public class SubsystemProcessor extends BaseProcessor {
         // We have our role map and our subsystem directories. The next step is to create the subsystem projector.
         // For this, we loop through the map of valid subsystem directories.
         log.info("Building the projector with {} roles in the role map.", allRoles.size());
-        int subCount = 0;
-        final int subTotal = this.subDirSet.size();
-        for (File subDir : this.subDirSet) {
-            subCount++;
-            log.info("Loading subsystem {} of {} from {}.", subCount, subTotal, subDir);
-            CoreSubsystem sub = new CoreSubsystem(subDir, allRoles);
-            if (! sub.hasRules()) {
-                log.info("Generating rules for {}.", sub.getName());
-                sub.createRules();
+        try (PrintWriter genWriter = new PrintWriter(this.generatedFile)) {
+            genWriter.println("subsystem_name\tnew_rules\tnum_defs\tnum_rules");
+            int subCount = 0;
+            final int subTotal = this.subDirSet.size();
+            for (File subDir : this.subDirSet) {
+                subCount++;
+                log.info("Loading subsystem {} of {} from {}.", subCount, subTotal, subDir);
+                CoreSubsystem sub = new CoreSubsystem(subDir, allRoles);
+                boolean generated = false;
+                if (! sub.hasRules()) {
+                    log.info("Generating rules for {}.", sub.getName());
+                    sub.createRules();
+                    generated = true;
+                }
+                // Import the subsystem into the projector.
+                this.projector.addSubsystem(sub);
+                // Write the generator report.
+                genWriter.println(sub.getName() + "\t" + (generated ? "Y" : "") + "\t"
+                        + sub.getRuleNameCount() + "\t" + sub.getVariantRuleCount());
             }
-            // Import the subsystem into the projector.
-            this.projector.addSubsystem(sub);
         }
         // Now we load the genomes in batches and process them.  We also generate the complete-genome
         // list and blank-annotation list here.
