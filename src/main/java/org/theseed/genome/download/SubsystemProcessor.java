@@ -184,7 +184,7 @@ public class SubsystemProcessor extends BaseProcessor {
             }
         }
         // Compute the output files.
-        this.projectorFile = new File(this.outDir, "variants.tbl");
+        this.projectorFile = new File(this.outDir, "variants.ser");
         this.errorFile = new File(this.outDir, "errors.tbl");
         this.roleCountFile = new File(this.outDir, "roleCounts.tbl");
         this.completeFile = new File(this.outDir, "complete.tbl");
