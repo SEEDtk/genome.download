@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,11 +31,12 @@ import org.theseed.proteins.RoleSet;
 import org.theseed.subsystems.CountingSpreadsheetAnalyzer;
 import org.theseed.subsystems.ProjectionSpreadsheetAnalyzer;
 import org.theseed.subsystems.SpreadsheetAnalyzer;
-import org.theseed.subsystems.SubsystemProjector;
-import org.theseed.subsystems.SubsystemSpec;
+import org.theseed.subsystems.StrictRoleMap;
 import org.theseed.subsystems.TrackingSpreadsheetAnalyzer;
 import org.theseed.subsystems.VariantId;
 import org.theseed.subsystems.core.CoreSubsystem;
+import org.theseed.subsystems.core.SubsystemDescriptor;
+import org.theseed.subsystems.core.SubsystemRuleProjector;
 
 /**
  * This command processes a CoreSEED data directory and computes the subsystem projector.
@@ -53,8 +55,8 @@ import org.theseed.subsystems.core.CoreSubsystem;
  * A subsystem row is ignored if the variant code is "-1", "inactive", or "*-1".
  *
  * The positional parameters are the name of the CoreSEED data directory and the name of the data directory for output files.
- * The projector will be called "variants.tbl", the error file "errors.tbl", and the role-counts file "roleCounts.tbl".
- * In addition, a role definition file will be produced in "roles.in.subsystems", and a list of complete genomes in
+ * The projector will be called "variants.ser", the error file "errors.tbl", and the role-counts file "roleCounts.tbl".
+ * In addition, a role definition file will be produced in "subsystem.roles", and a list of complete genomes in
  * "complete.tbl".
  *
  * The command-line options are as follows:
@@ -64,7 +66,7 @@ import org.theseed.subsystems.core.CoreSubsystem;
  * -b	batch size for loading genomes (default 100)
  *
  * --clear		erase the output directory before processing
- * --roles		an existing roles.in.subsystems file to pre-load
+ * --roles		an existing subsystem.roles file to pre-load
  * --filter		if specified, a file of subsystem names; only the named subsystems will be checked
  * --save		if specified, the name of a directory in which to store GTOs for the CoreSEED
  *
@@ -78,12 +80,14 @@ public class SubsystemProcessor extends BaseProcessor {
     protected static Logger log = LoggerFactory.getLogger(SubsystemProcessor.class);
     /** genome hash */
     private Map<String, Genome> genomeMap;
+    /** genome role presence map hash */
+    private Map<String, Map<String, Set<String>>> gRoleMaps;
     /** genome directory */
     private GenomeSource genomes;
     /** subsystem information to be saved for projection */
-    private SubsystemProjector projector;
-    /** map of subsystem directories to subsystem specifiers */
-    private Map<File, SubsystemSpec> subDirMap;
+    private SubsystemRuleProjector projector;
+    /** set of valid subsystem directories */
+    private Set<File> subDirSet;
     /** list of analyzers to run */
     private List<SpreadsheetAnalyzer> analyzers;
     /** bad-feature output file */
@@ -154,8 +158,8 @@ public class SubsystemProcessor extends BaseProcessor {
         log.info("{} genomes found to process.  Batch size is {}.", this.genomes.size(), this.batchSize);
         this.genomeMap = new HashMap<String, Genome>(this.batchSize);
         // Create the subsystem projector and the directory map.
-        this.projector = new SubsystemProjector(this.roleFile);
-        this.subDirMap = new HashMap<File, SubsystemSpec>();
+        this.projector = new SubsystemRuleProjector(this.roleFile);
+        this.subDirSet = new HashSet<File>();
         // Set up the output directory.
         if (! this.outDir.isDirectory()) {
             log.info("Creating output directory {}.", this.outDir);
@@ -183,15 +187,17 @@ public class SubsystemProcessor extends BaseProcessor {
         this.completeFile = new File(this.outDir, "complete.tbl");
         this.blankFile = new File(this.outDir, "blank.tbl");
         // Create the analyzers.
-        this.analyzers.add(new ProjectionSpreadsheetAnalyzer(this.projector, this.projectorFile));
-        this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.projector, this.errorFile));
-        this.analyzers.add(new CountingSpreadsheetAnalyzer(this.projector, this.roleCountFile));
+        this.analyzers.add(new ProjectionSpreadsheetAnalyzer());
+        this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.errorFile));
+        this.analyzers.add(new CountingSpreadsheetAnalyzer(this.roleCountFile));
         return true;
     }
 
     @Override
     protected void runCommand() throws Exception {
-        // We loop through the subsystems, memorizing the classifications.
+        // Get the role map. We fill it in on this first pass.
+        StrictRoleMap allRoles = this.projector.usefulRoles();
+        // We loop through the subsystems, memorizing the classifications and analyzing the spreadsheets.
         List<File> subDirs = CoreSubsystem.getFilteredSubsystemDirectories(this.coreDir, this.filterFile);
         log.info("{} subsystem directories found with spreadsheets.", subDirs.size());
         for (File subDir : subDirs) {
@@ -224,19 +230,34 @@ public class SubsystemProcessor extends BaseProcessor {
                     // Now we have the classification and we know this is a subsystem we want to process.  Save its
                     // information.
                     log.info("Saving subsystem {}: {}; {}; {}.", subName, classParts[0], classParts[1], classParts[2]);
-                    SubsystemSpec subsystem = new SubsystemSpec(subName);
-                    subsystem.setClassifications(classParts);
-                    this.subDirMap.put(subDir, subsystem);
+                    this.subDirSet.add(subDir);
                     // The last step is to read the spreadsheet file.  From this we get the role list.  We will read it
                     // again to get the feature bindings for each genome batch.
                     try (LineReader subStream = new LineReader(new File(subDir, "spreadsheet"))) {
-                        for (String line = subStream.next(); ! line.contentEquals(SubsystemProjector.END_MARKER);
-                                line = subStream.next())
-                            subsystem.addRole(StringUtils.substringAfter(line, "\t"));
+                        for (String line = subStream.next(); ! line.contentEquals(CoreSubsystem.SECTION_MARKER);
+                                line = subStream.next()) {
+                            String roleName = StringUtils.substringAfter(line, "\t");
+                            allRoles.findOrInsert(roleName);
+                        }
                     }
-                    this.projector.addSubsystem(subsystem);
                 }
             }
+        }
+        // We have our role map and our subsystem directories. The next step is to create the subsystem projector.
+        // For this, we loop through the map of valid subsystem directories.
+        log.info("Building the projector with {} roles in the role map.", allRoles.size());
+        int subCount = 0;
+        final int subTotal = this.subDirSet.size();
+        for (File subDir : this.subDirSet) {
+            subCount++;
+            log.info("Loading subsystem {} of {} from {}.", subCount, subTotal, subDir);
+            CoreSubsystem sub = new CoreSubsystem(subDir, allRoles);
+            if (! sub.hasRules()) {
+                log.info("Generating rules for {}.", sub.getName());
+                sub.createRules();
+            }
+            // Import the subsystem into the projector.
+            this.projector.addSubsystem(sub);
         }
         // Now we load the genomes in batches and process them.  We also generate the complete-genome
         // list and blank-annotation list here.
@@ -249,14 +270,11 @@ public class SubsystemProcessor extends BaseProcessor {
                 if (this.genomeMap.size() >= this.batchSize) {
                     this.processBatch();
                     this.genomeMap.clear();
+                    this.gRoleMaps.clear();
                 }
-                // Clear the existing subsystems and store the new genome in the maps.  The subsystems are
-                // populated when we process the batch.
-                genome.clearSubsystems();
                 // Do the completeness check.
                 String genomeId = genome.getId();
                 String genomeName = genome.getName();
-                this.genomeMap.put(genomeId, genome);
                 if (genome.isComplete())
                     completeWriter.println(genomeId + "\t" + genomeName);
                 // Scan for features with missing annotations.
@@ -264,17 +282,22 @@ public class SubsystemProcessor extends BaseProcessor {
                     if (StringUtils.isBlank(feat.getFunction()))
                         blankWriter.println(genomeId + "\t" + feat.getId() + "\t" + genomeName);
                 }
+                // Create the role presence map.
+                Map<String, Set<String>> gRoleMap = allRoles.getRolePresenceMap(genome);
+                // Store the genome in the batch.
+                this.genomeMap.put(genomeId, genome);
+                this.gRoleMaps.put(genomeId, gRoleMap);
             }
             // Process the residual batch.
             this.processBatch();
         }
+        // Write out the projector file.
+        log.info("Writing projector binary to {}.", this.projectorFile);
+        this.projector.save(this.projectorFile);
         // Write out an extra copy of the role map
-        log.info("Writing roles.in.subsystems.");
-        File roleFile = new File(this.outDir, "roles.in.subsystems");
+        log.info("Writing subsystem.roles.");
+        File roleFile = new File(this.outDir, "subsystem.roles");
         this.projector.usefulRoles().save(roleFile);
-        // Write out a rule report.
-        File ruleFile = new File(this.outDir, "rules.txt");
-        this.projector.ruleReport(ruleFile);
         // Terminate the analyzers.
         for (SpreadsheetAnalyzer analyzer : this.analyzers)
             analyzer.close();
@@ -282,19 +305,12 @@ public class SubsystemProcessor extends BaseProcessor {
 
     private void processBatch() throws IOException {
         log.info("Processing batch of {} genomes.", this.genomeMap.size());
-        // Create role maps for all the genomes.
-        Map<String, Map<String, Set<String>>> gRoleMaps = new HashMap<>(this.batchSize);
-        for (Map.Entry<String, Genome> genomeEntry : this.genomeMap.entrySet()) {
-            final Genome genome = genomeEntry.getValue();
-            log.info("Computing role map for {}.", genome);
-            Map<String, Set<String>> roleMap = this.projector.computeRoleMap(genome);
-            gRoleMaps.put(genomeEntry.getKey(), roleMap);
-        }
-        // Loop through the subsystems, finding the role bindings.
-        for (Map.Entry<File, SubsystemSpec> subEntry : this.subDirMap.entrySet()) {
-            File subDir = subEntry.getKey();
-            SubsystemSpec subsystem = subEntry.getValue();
-            log.info("Reading spreadsheet for subsystem {}.", subsystem.getName());
+        // Loop through the subsystems, analyzing the role bindings.
+        for (File subDir : this.subDirSet) {
+            // Compute the subsystem name.
+            String subName = CoreSubsystem.dirToName(subDir);
+            log.info("Reading spreadsheet for subsystem  {}.", subName);
+            // Read the spreadsheet.
             try (LineReader spreadsheetStream = new LineReader(new File(subDir, "spreadsheet"))) {
                 // Skip past the role names and group definitions.
                 this.skipGroups(spreadsheetStream);
@@ -307,16 +323,18 @@ public class SubsystemProcessor extends BaseProcessor {
                         Genome genome = this.genomeMap.get(genomeId);
                         if (genome != null) {
                             // Now we have an active row for a genome of interest.
-                            this.createSubsystem(genome, gRoleMaps.get(genomeId), subsystem, fields);
+                            this.analyzeSubsystem(genome, subName, this.gRoleMaps.get(genomeId), fields);
                         }
                     }
                 }
             }
         }
-        // Check to see if we need to write out the genomes.
+        // Check to see if we need to write out the genomes. If we do, we add the subsystems here.
         if (this.coreGtoDir != null) {
             log.info("Preparing to save {} genomes to {}.", this.genomeMap.size(), this.coreGtoDir);
             for (Genome genome : this.genomeMap.values()) {
+                // Note that we project all subsystems, even inactive ones.
+                this.projector.project(genome, this.gRoleMaps.get(genome.getId()), false);
                 File outFile = new File(this.coreGtoDir, genome.getId() + ".gto");
                 log.info("Saving genome to {}.", outFile);
                 genome.save(outFile);
@@ -325,21 +343,23 @@ public class SubsystemProcessor extends BaseProcessor {
     }
 
     /**
-     * Create the subsystem row in the specified genome for the current subsystem.
+     * Analyze the subsystem row in the specified genome for the current subsystem.
      *
      * @param genome	genome implementing the subsystem
+     * @param subName	subsystem name
      * @param roleMap 	role map for the genome
-     * @param subsystem	subsystem specification
      * @param fields	array of fields in the spreadsheet row
      */
-    private void createSubsystem(Genome genome, Map<String, Set<String>> roleMap, SubsystemSpec subsystem, String[] fields) {
+    private void analyzeSubsystem(Genome genome, String subName, Map<String, Set<String>> roleMap, String[] fields) {
+        // Get the descriptor for this subsystem.
+        SubsystemDescriptor subDesc = this.projector.getSubsystem(subName);
         // Initialize for processing this row.  Note that field 1 is the variant code.
         for (SpreadsheetAnalyzer analyzer : this.analyzers)
-            analyzer.openRow(genome, roleMap, subsystem, fields[1]);
+            analyzer.openRow(genome, roleMap, subDesc, fields[1]);
         // This will be the feature ID prefix for all features.  Some will also need "peg".
         String prefix = "fig|" + genome.getId() + ".";
         // Now process the roles.
-        List<String> roles = subsystem.getRoles();
+        List<String> roles = subDesc.getRoleNames();
         for (int i = 0; i < roles.size(); i++) {
             // Get the roleset for this role.
             String function = roles.get(i);
@@ -352,7 +372,7 @@ public class SubsystemProcessor extends BaseProcessor {
                     // Look for the feature.  We need to make sure it exists and implements the
                     // cell's roles.
                     Feature feat = genome.getFeature(fid);
-                    RoleSet fRoles = projector.getRoleIds(feat);
+                    RoleSet fRoles = projector.getRoleIds(feat.getFunction());
                     if (fRoles.contains(cRoles)) {
                         // Here we are good.  Add this cell to the variant.
                         for (SpreadsheetAnalyzer analyzer : this.analyzers)
@@ -392,7 +412,7 @@ public class SubsystemProcessor extends BaseProcessor {
         int markersFound = 0;
         while (markersFound < 2) {
             String line = spreadsheetStream.next();
-            if (line.contentEquals(SubsystemProjector.END_MARKER))
+            if (line.contentEquals(CoreSubsystem.SECTION_MARKER))
                 markersFound++;
         }
     }

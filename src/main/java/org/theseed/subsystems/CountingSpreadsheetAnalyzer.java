@@ -13,6 +13,7 @@ import java.util.TreeMap;
 
 import org.theseed.counters.CountMap;
 import org.theseed.genome.Feature;
+import org.theseed.subsystems.core.SubsystemDescriptor;
 
 /**
  * This analyzer counts the number of times each role is found in a spreadsheet cell, and produces a summary
@@ -77,7 +78,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     /** output file for report */
     private PrintWriter outStream;
     /** map of subsystems to cell specifiers */
-    private Map<SubsystemSpec, CellSpec[]> countingMap;
+    private Map<SubsystemDescriptor, CellSpec[]> countingMap;
     /** currently-active cell-specification array */
     private CellSpec[] currentCounts;
     /** number of variants with incorrect roles */
@@ -95,8 +96,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
      * @param projector		controlling subsystem projector
      * @param outFile		target output file
      */
-    public CountingSpreadsheetAnalyzer(SubsystemProjector projector, File outFile) {
-        super(projector);
+    public CountingSpreadsheetAnalyzer(File outFile) {
         this.badVariants = 0;
         // Set up the output file.
         log.info("Role counts will be output to {}.", outFile);
@@ -107,14 +107,14 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         }
         this.outStream.println(TRACKING_HEADER);
         // Create the count map.  Note we sort by subsystem name.
-        this.countingMap = new TreeMap<SubsystemSpec, CellSpec[]>();
+        this.countingMap = new TreeMap<SubsystemDescriptor, CellSpec[]>();
     }
 
     @Override
     protected void initializeRow(String variantCode) {
         this.badRoles = false;
         // Verify that we have the cell-specification array for the current subsystem.
-        SubsystemSpec subsystem = this.getSubsystem();
+        SubsystemDescriptor subsystem = this.getSubsystem();
         if (! this.countingMap.containsKey(subsystem)) {
             int roleCount = subsystem.getRoleCount();
             this.currentCounts = new CellSpec[roleCount];
@@ -158,8 +158,8 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         int badSubsystems = 0;
         int badColumns = 0;
         // Now we have accumulated all the counts and we spool them off by subsystem.
-        for (Map.Entry<SubsystemSpec, CellSpec[]> subEntry : this.countingMap.entrySet()) {
-            SubsystemSpec subsystem = subEntry.getKey();
+        for (Map.Entry<SubsystemDescriptor, CellSpec[]> subEntry : this.countingMap.entrySet()) {
+            SubsystemDescriptor subsystem = subEntry.getKey();
             boolean badSubsystem = false;
             CellSpec[] subCounts = subEntry.getValue();
             for (int i = 0; i < subCounts.length; i++)

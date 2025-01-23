@@ -44,8 +44,7 @@ public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
      * @param projector		controlling subsystem projector
      * @param outFile		output file for the report
      */
-    public TrackingSpreadsheetAnalyzer(SubsystemProjector projector, File outFile) {
-        super(projector);
+    public TrackingSpreadsheetAnalyzer(File outFile) {
         log.info("Error-tracking output will be to {}.", outFile);
         try {
             this.outStream = new PrintWriter(outFile);

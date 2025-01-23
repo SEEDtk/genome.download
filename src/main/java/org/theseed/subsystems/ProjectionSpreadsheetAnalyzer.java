@@ -3,18 +3,17 @@
  */
 package org.theseed.subsystems;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.util.BitSet;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 
 import org.theseed.genome.Feature;
-import org.theseed.genome.Genome;
+import org.theseed.subsystems.core.SubsystemDescriptor;
 
 /**
- * This analyzer projects the subsystems into the genomes and optionally writes the projector to a file.
+ * This analyzer finds bad spreadsheet rows and missing roles.
  *
  * @author Bruce Parrello
  *
@@ -22,18 +21,65 @@ import org.theseed.genome.Genome;
 public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
 
     // FIELDS
-    /** output file */
-    private File projectorFile;
     /** current variant specification */
-    private VariantSpec variant;
+    private VariantDef variant;
     /** TRUE if this variant can be projected */
     private boolean goodVariant;
     /** number of rows processed */
     private int totalCount;
-    /** number of rows stored */
-    private int storedCount;
+    /** number of good rows found */
+    private int goodRowCount;
     /** number of distinct specifications */
     private int specCount;
+    /** set of distinct variant specifications found */
+    private Set<VariantDef> variants;
+
+    /**
+     * This object describes a variant.
+     */
+    protected static class VariantDef {
+
+        /** parent subsystem name */
+        private String subsysName;
+        /** variant code */
+        private String vCode;
+        /** map of present roles */
+        private BitSet roles;
+
+        protected VariantDef(SubsystemDescriptor subsys, String variantCode) {
+            this.subsysName = subsys.getName();
+            this.vCode = variantCode;
+            this.roles = new BitSet(subsys.getRoleCount());
+        }
+
+        /**
+         * Specify that a spreadsheet cell is active in this variant.
+         *
+         * @param idx	column index of active cell.
+         */
+        public void setCell(int idx) {
+            this.roles.set(idx);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(roles, subsysName, vCode);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            VariantDef other = (VariantDef) obj;
+            return Objects.equals(this.roles, other.roles) && Objects.equals(this.subsysName, other.subsysName)
+                    && Objects.equals(this.vCode, other.vCode);
+        }
+
+    }
 
     /**
      * Set up to write out a completed subsystem projector.
@@ -41,42 +87,32 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
      * @param projector		subsystem projector being constructed
      * @param outFile		designated output file
      */
-    public ProjectionSpreadsheetAnalyzer(SubsystemProjector projector, File outFile) {
-        super(projector);
-        this.projectorFile = outFile;
-        if (outFile != null) {
-            log.info("Subsystem projector will be written to {}.", outFile);
-            // Verify that we can write to the projector file.
-            try {
-                FileOutputStream testStream = new FileOutputStream(this.projectorFile);
-                testStream.close();
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
+    public ProjectionSpreadsheetAnalyzer() {
         // Clear the counters.
         this.totalCount = 0;
-        this.storedCount = 0;
+        this.goodRowCount = 0;
         this.specCount = 0;
+        // Set up the variant specification set.
+        this.variants = new HashSet<VariantDef>(4000);
     }
 
     @Override
     protected void initializeRow(String variantCode) {
         // Create the variant specification we are building from this row.
-        this.variant = new VariantSpec(this.getSubsystem(), variantCode);
+        this.variant = new VariantDef(this.getSubsystem(), variantCode);
         this.goodVariant = true;
     }
 
     @Override
     protected void recordGoodCell(int idx, Feature feat) {
-        activateCell(idx);
+        this.activateCell(idx);
     }
 
     @Override
     protected void recordMissingFeature(int idx, String fid, String roleDesc) {
         // This is serious, as it means the variant cannot be stored in this genome.
         this.goodVariant = false;
-        activateCell(idx);
+        this.activateCell(idx);
     }
 
     /**
@@ -85,12 +121,12 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
      * @param idx	column number (0-based) of the active role
      */
     private void activateCell(int idx) {
-        this.variant.setCell(idx, this.getProjector());
+        this.variant.setCell(idx);
     }
 
     @Override
     protected void recordReplacementFeatures(int idx, String fid, String roleDesc, Set<String> fids) {
-        activateCell(idx);
+        this.activateCell(idx);
     }
 
     @Override
@@ -98,7 +134,7 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         // Again, this means the variant cannot be stored in this genome.  However, we still
         // recognize that if it is found somewhere else, it is a valid variant.
         this.goodVariant = false;
-        activateCell(idx);
+        this.activateCell(idx);
         log.info("Bad variant {} found due to missing role \"{}\". Original feature was {} ({}).",
                 this.variant, roleDesc, feat.getId(), feat.getPegFunction());
     }
@@ -107,29 +143,18 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     protected void terminateRow() {
         // Save the variant specification.
         this.totalCount++;
-        boolean isNew = this.getProjector().addVariant(variant);
+        boolean isNew = this.variants.add(variant);
         if (isNew) this.specCount++;
         if (this.goodVariant) {
-            // Here we can store it in the genome.
-            Genome genome = this.getGenome();
-            this.variant.instantiate(genome, this.getRoleMap());
-            this.storedCount++;
-            log.debug("Good variant {} stored in {}.", this.variant, genome);
+            // Here we have a good spreadsheet row.
+            this.goodRowCount++;
         }
     }
 
     @Override
     protected void terminateAll() {
-        log.info("{} subsystem rows scanned, producing {} variant specifications.  {} genome updates were made.",
-                this.totalCount, this.specCount, this.storedCount);
-        if (this.projectorFile != null) {
-            log.info("Saving subsystem projector to {}.", this.projectorFile);
-            try {
-                this.getProjector().save(this.projectorFile);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
+        log.info("{} subsystem rows scanned, producing {} variant specifications.  {} good rows found.",
+                this.totalCount, this.specCount, this.goodRowCount);
     }
 
 }

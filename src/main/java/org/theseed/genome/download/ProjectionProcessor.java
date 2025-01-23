@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.Genome;
 import org.theseed.genome.GenomeDirectory;
-import org.theseed.subsystems.SubsystemProjector;
+import org.theseed.subsystems.core.SubsystemRuleProjector;
 
 /**
  * This command projects subsystems onto existing GTOs.  The positional parameters are the name of the subsystem projection
@@ -36,7 +36,7 @@ public class ProjectionProcessor extends BaseProcessor {
     /** logging facility */
     protected static Logger log = LoggerFactory.getLogger(ProjectionProcessor.class);
     /** subsystem projector */
-    private SubsystemProjector projector;
+    private SubsystemRuleProjector projector;
 
     // COMMAND-LINE OPTIONS
 
@@ -81,7 +81,7 @@ public class ProjectionProcessor extends BaseProcessor {
         }
         // Read the projector file.
         log.info("Reading subsystem projector from {}.", this.projectorFile);
-        this.projector = SubsystemProjector.load(this.projectorFile);
+        this.projector = SubsystemRuleProjector.load(this.projectorFile);
         return true;
     }
 
@@ -93,7 +93,7 @@ public class ProjectionProcessor extends BaseProcessor {
         log.info("{} genomes found in directory.", genomes.size());
         for (Genome genome : genomes) {
             log.info("Scanning {}.", genome);
-            this.projector.project(genome);
+            this.projector.project(genome, true);
             File outFile = new File(this.outDir, genome.getId() + ".gto");
             log.info("Saving genome to {}.", outFile);
             genome.save(outFile);

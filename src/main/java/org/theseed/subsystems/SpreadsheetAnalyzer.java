@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
+import org.theseed.subsystems.core.SubsystemDescriptor;
 
 /**
  * This is the base class for subsystem spreadsheet analysis.  It provides access to the subsystem
@@ -28,20 +29,9 @@ public abstract class SpreadsheetAnalyzer {
     /** current genome */
     private Genome genome;
     /** current subsystem */
-    private SubsystemSpec subsystem;
-    /** subsystem projector */
-    private SubsystemProjector projector;
+    private SubsystemDescriptor subsystem;
     /** genome role map, connecting each role ID to the features with that role */
     private Map<String, Set<String>> roleMap;
-
-    /**
-     * Construct a new spreadsheet analyzer.  All analyzers must be constructed with an active projector.
-     *
-     * @param projector		relevant subsystem projector
-     */
-    public SpreadsheetAnalyzer(SubsystemProjector projector) {
-        this.projector = projector;
-    }
 
     /**
      * Register the current subsystem row.
@@ -51,7 +41,7 @@ public abstract class SpreadsheetAnalyzer {
      * @param subsystem		subsystem in the genome
      * @param variantCode	relevant variant code
      */
-    public void openRow(Genome genome, Map<String, Set<String>> roleMap, SubsystemSpec subsystem, String variantCode) {
+    public void openRow(Genome genome, Map<String, Set<String>> roleMap, SubsystemDescriptor subsystem, String variantCode) {
         this.genome = genome;
         this.subsystem = subsystem;
         this.roleMap = roleMap;
@@ -179,15 +169,8 @@ public abstract class SpreadsheetAnalyzer {
     /**
      * @return the current subsystem
      */
-    protected SubsystemSpec getSubsystem() {
+    protected SubsystemDescriptor getSubsystem() {
         return subsystem;
-    }
-
-    /**
-     * @return the subsystem projector
-     */
-    protected SubsystemProjector getProjector() {
-        return projector;
     }
 
     /**
