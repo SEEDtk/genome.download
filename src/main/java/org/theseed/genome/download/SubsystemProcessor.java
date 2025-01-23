@@ -159,6 +159,7 @@ public class SubsystemProcessor extends BaseProcessor {
         this.genomes = GenomeSource.Type.CORE.create(this.coreDir);
         log.info("{} genomes found to process.  Batch size is {}.", this.genomes.size(), this.batchSize);
         this.genomeMap = new HashMap<String, Genome>(this.batchSize);
+        this.gRoleMaps = new HashMap<String, Map<String, Set<String>>>(this.batchSize);
         // Create the subsystem projector and the directory map.
         this.projector = new SubsystemRuleProjector(this.roleFile);
         this.subDirSet = new HashSet<File>();
@@ -259,7 +260,6 @@ public class SubsystemProcessor extends BaseProcessor {
                 CoreSubsystem sub = new CoreSubsystem(subDir, allRoles);
                 boolean generated = false;
                 if (! sub.hasRules()) {
-                    log.info("Generating rules for {}.", sub.getName());
                     sub.createRules();
                     generated = true;
                 }
@@ -374,7 +374,7 @@ public class SubsystemProcessor extends BaseProcessor {
         for (int i = 0; i < roles.size(); i++) {
             // Get the roleset for this role.
             String function = roles.get(i);
-            RoleSet cRoles = projector.getRoleIds(function);
+            RoleSet cRoles = this.projector.getRoleIds(function);
             // Get the pegs for this role.
             if (i + 2 < fields.length) {
                 String[] pegs = StringUtils.split(fields[i + 2], ',');
@@ -383,7 +383,11 @@ public class SubsystemProcessor extends BaseProcessor {
                     // Look for the feature.  We need to make sure it exists and implements the
                     // cell's roles.
                     Feature feat = genome.getFeature(fid);
-                    RoleSet fRoles = projector.getRoleIds(feat.getFunction());
+                    RoleSet fRoles;
+                    if (feat == null)
+                        fRoles = RoleSet.NO_ROLES;
+                    else
+                        fRoles = this.projector.getRoleIds(feat.getFunction());
                     if (fRoles.contains(cRoles)) {
                         // Here we are good.  Add this cell to the variant.
                         for (SpreadsheetAnalyzer analyzer : this.analyzers)
