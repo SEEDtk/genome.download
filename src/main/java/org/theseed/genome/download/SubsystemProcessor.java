@@ -305,7 +305,7 @@ public class SubsystemProcessor extends BaseProcessor {
         // Write out the projector file.
         log.info("Writing projector binary to {}.", this.projectorFile);
         this.projector.save(this.projectorFile);
-        // Write out an extra copy of the role map
+        // Write out an updated copy of the role map
         log.info("Writing subsystem.roles.");
         File roleFile = new File(this.outDir, "subsystem.roles");
         this.projector.usefulRoles().save(roleFile);
