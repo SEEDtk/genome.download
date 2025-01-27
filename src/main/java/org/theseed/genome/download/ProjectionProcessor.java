@@ -44,7 +44,7 @@ public class ProjectionProcessor extends BaseProcessor {
     private boolean clearFlag;
 
     /** projector file */
-    @Argument(index = 0, metaVar = "variants.tbl", usage = "subsystem projector file")
+    @Argument(index = 0, metaVar = "variants.ser", usage = "subsystem projector file")
     private File projectorFile;
 
     /** input directory */
