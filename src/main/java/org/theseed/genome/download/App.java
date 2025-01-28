@@ -24,6 +24,7 @@ import org.theseed.basic.BaseProcessor;
  * subMap		create a map from subsystem IDs to subsystem names
  * sraMap		list SRA samples corresponding to PATRIC genomes
  * sraFasta		create a FASTA pseudo-sample directory from sraMap output
+ * project1		project subsystems into a single GTO
  *
  */
 public class App
@@ -88,6 +89,9 @@ public class App
             break;
         case "project" :
             processor = new ProjectionProcessor();
+            break;
+        case "project1" :
+            processor = new Project1Processor();
             break;
         case "copy" :
             processor = new GenomeCopyProcessor();
