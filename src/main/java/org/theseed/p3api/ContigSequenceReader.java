@@ -36,13 +36,13 @@ public class ContigSequenceReader extends SequenceReader {
         // Loop through the contigs, collecting sequences.
         for (var contig : contigs) {
             // Insure DNA is output in lower case.  Note that getString never returns NULL, only empty strings.
-            String sequence = P3Connection.getString(contig, "sequence").toLowerCase();
+            String sequence = KeyBuffer.getString(contig, "sequence").toLowerCase();
             // Skip the sequence if it is blank.
             if (! sequence.isEmpty()) {
                 // Get the label and the comment.  For genomes created from read assemblies, the description is the original contig ID.
                 // Note we prefix the genome ID to the contig ID to insure uniqueness if the output groups are combined.
-                String label = genomeId + ":" + P3Connection.getString(contig, "sequence_id");
-                String comment = P3Connection.getString(contig, "description");
+                String label = genomeId + ":" + KeyBuffer.getString(contig, "sequence_id");
+                String comment = KeyBuffer.getString(contig, "description");
                 // Output the sequence.
                 retVal.add(new Sequence(label, comment, sequence));
             }

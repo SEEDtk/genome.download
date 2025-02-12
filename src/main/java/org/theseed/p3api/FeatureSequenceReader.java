@@ -68,9 +68,9 @@ public abstract class FeatureSequenceReader extends SequenceReader {
                 this.processBatch(p3, retVal);
                 this.seqIdMap.clear();
             }
-            String label = P3Connection.getString(feature, "patric_id");
-            String comment = P3Connection.getString(feature, "product");
-            String seqId = P3Connection.getString(feature, this.seqField);
+            String label = KeyBuffer.getString(feature, "patric_id");
+            String comment = KeyBuffer.getString(feature, "product");
+            String seqId = KeyBuffer.getString(feature, this.seqField);
             // Only proceed if the sequence ID is valid.
             if (! StringUtils.isBlank(seqId)) {
                 List<Sequence> seqList = this.seqIdMap.computeIfAbsent(seqId, x -> new ArrayList<Sequence>(5));
@@ -98,7 +98,7 @@ public abstract class FeatureSequenceReader extends SequenceReader {
             String seqId = seqEntry.getKey();
             var seqRecord = seqEntry.getValue();
             // Get the actual sequence and post-process it.
-            var sequence = this.formatSequence(P3Connection.getString(seqRecord, "sequence"));
+            var sequence = this.formatSequence(KeyBuffer.getString(seqRecord, "sequence"));
             // If it id valid, output its FASTA records.
             var seqList = this.seqIdMap.get(seqId);
             for (Sequence seq : seqList) {

@@ -24,6 +24,7 @@ import org.theseed.ncbi.NcbiListQuery;
 import org.theseed.ncbi.NcbiTable;
 import org.theseed.ncbi.XmlException;
 import org.theseed.ncbi.XmlUtils;
+import org.theseed.p3api.KeyBuffer;
 import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.P3Connection.Table;
 import org.theseed.utils.BasePipeProcessor;
@@ -180,12 +181,12 @@ public class SraMapProcessor extends BasePipeProcessor {
         for (var recordEntry : records.entrySet()) {
             String genomeId = recordEntry.getKey();
             JsonObject record = recordEntry.getValue();
-            String sraString = P3Connection.getString(record, "sra_accession");
+            String sraString = KeyBuffer.getString(record, "sra_accession");
             if (StringUtils.isBlank(sraString))
                 this.runlessCount++;
             else {
                 // Here we have runs to process.  Save the genome name.
-                String genomeName = P3Connection.getString(record, "genome_name");
+                String genomeName = KeyBuffer.getString(record, "genome_name");
                 this.nameMap.put(genomeId, genomeName);
                 // Extract the runs and map them to the genome.
                 String[] runs = StringUtils.split(sraString, ',');

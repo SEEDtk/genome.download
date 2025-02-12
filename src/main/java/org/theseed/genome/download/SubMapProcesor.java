@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.theseed.basic.BaseProcessor;
 import org.theseed.basic.ParseFailureException;
 import org.theseed.p3api.Criterion;
+import org.theseed.p3api.KeyBuffer;
 import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.P3Connection.Table;
 import org.theseed.subsystems.SubsystemIdMap;
@@ -99,7 +100,7 @@ public class SubMapProcesor extends BaseProcessor {
         int processed = 0;
         long lastMsg = System.currentTimeMillis();
         for (var subRecord : subRecords) {
-            String subName = P3Connection.getString(subRecord, "subsystem_name");
+            String subName = KeyBuffer.getString(subRecord, "subsystem_name");
             if (subName != null) {
                 // Insure this subsystem is in the map.
                 this.subMap.findOrInsert(subName);
