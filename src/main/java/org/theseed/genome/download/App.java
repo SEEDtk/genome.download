@@ -25,6 +25,7 @@ import org.theseed.basic.BaseProcessor;
  * sraMap		list SRA samples corresponding to PATRIC genomes
  * sraFasta		create a FASTA pseudo-sample directory from sraMap output
  * project1		project subsystems into a single GTO
+ * dump			dump genomes from BV-BRC
  *
  */
 public class App
@@ -47,7 +48,8 @@ public class App
              "sync", "synchronize a genome target with a list of PATRIC genome IDs",
              "subMap", "create a map from subsystem IDs to subsystem names",
              "sraMap", "list SRA samples corresponding to PATRIC genomes",
-             "sraFasta", "create a FASTA pseudo-sample directory from sraMap output"
+             "sraFasta", "create a FASTA pseudo-sample directory from sraMap output",
+             "dump", "dump genomes from BV-BRC"
     };
 
     public static void main( String[] args ) {
@@ -111,6 +113,9 @@ public class App
         case "sraFasta" :
             processor = new SraFastaProcessor();
             break;
+        case "dump" :
+        	processor = new GenomeDumpProcessor();
+        	break;
         case "-h" :
         case "--help" :
             processor = null;
