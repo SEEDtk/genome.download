@@ -28,6 +28,7 @@ import org.theseed.p3api.RawP3Connection;
 import org.theseed.utils.BaseInputProcessor;
 
 import com.github.cliftonlabs.json_simple.JsonObject;
+import com.github.cliftonlabs.json_simple.Jsoner;
 
 /**
  * This command will dump genomes from the BV-BRC in the form of JSON genome dump directories.
@@ -77,6 +78,8 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 	private int invalidCount;
 	/** number of files output */
 	private int fileCount;
+	/** number of genomes completed */
+	private int doneCount;
 	/** total number of input genomes */
 	private int genomeTotal;
 	/** array of virus cores */
@@ -164,6 +167,7 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 		this.invalidCount = 0;
 		this.skipCount = 0;
 		this.fileCount = 0;
+		this.doneCount = 0;
 		// Create the batch holder.
 		List<String> batch = new ArrayList<String>(this.batchSize);
 		// Loop through the genome IDs, processing batches.
@@ -242,6 +246,8 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 						FileUtils.forceMkdir(genomeDir);
 						this.writeFile(genomeDir, "genome", jsonList);
 						files++;
+						// For log purposes, get the total number of files we're dumping.
+						final int nFiles = coreNames.length + 1;
 						// Now loop through the other cores.
 						for (String coreName : coreNames) {
 							// Check for an odd criterion.
@@ -260,6 +266,7 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 							jsonList = p3.getRecords(coreName, criterion1);
 							this.writeFile(genomeDir, coreName, jsonList);
 							files++;
+							log.info("File {} of {} for {} completed.", files, nFiles, genomeId);
 						}
 					}
 				}
@@ -269,7 +276,9 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 				this.fileCount += files;
 				if (skipped) this.skipCount++;
 				if (invalid) this.invalidCount++;
+				this.doneCount++;
 			}
+			log.info("Dump completed for {} of {} genomes.", this.doneCount, this.genomeTotal);
 		} catch (IOException e) {
 			// All exceptions from this method must be unchecked, since it is used in a stream.
 			throw new UncheckedIOException(e);
@@ -293,7 +302,9 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 			// Loop through the list, writing JSON lines.
 			Iterator<JsonObject> iter = jsonList.iterator();
 			while (iter.hasNext()) {
-				writer.print(iter.next());
+				JsonObject json = iter.next();
+				String jsonString = Jsoner.serialize(json);
+				writer.print(jsonString);
 				// We append a comma to all but the last entry.
 				if (iter.hasNext())
 					writer.print(",");
@@ -302,7 +313,6 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 			// Write the trailing bracket.
 			writer.println("]");
 		}
-		log.info("File {} completed.", outFile);
 	}
 
 }
