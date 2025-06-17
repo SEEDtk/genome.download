@@ -11,7 +11,6 @@ import org.apache.commons.io.FileUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.theseed.basic.BaseProcessor;
-import org.theseed.basic.ICommand;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.p3api.P3Connection;
 import org.theseed.p3api.P3Genome;
@@ -42,7 +41,7 @@ import org.theseed.subsystems.core.SubsystemRuleProjector;
  * @author Bruce Parrello
  *
  */
-public class PatricProcessor extends BaseProcessor implements ICommand {
+public class PatricProcessor extends BaseProcessor {
 
     // FIELDS
     /** genome ID input stream */
