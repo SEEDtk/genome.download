@@ -49,10 +49,9 @@ public class SubTableProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         if (! genomeFile.canRead())
             throw new FileNotFoundException("Genome file " + this.genomeFile + " not found or unreadable.");
-        return true;
     }
 
     @Override

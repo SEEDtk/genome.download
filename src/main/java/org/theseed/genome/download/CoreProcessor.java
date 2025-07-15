@@ -63,7 +63,7 @@ public class CoreProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Verify the input directory.
         if (! this.inDir.isDirectory())
             throw new FileNotFoundException("Input directory " + this.inDir + " not found or invalid.");
@@ -74,8 +74,7 @@ public class CoreProcessor extends BaseProcessor {
         } else if (this.clearFlag) {
             log.info("Erasing output directory {}.", this.outDir);
             FileUtils.cleanDirectory(this.outDir);
-        }
-        return true;
+        }   
     }
 
     @Override

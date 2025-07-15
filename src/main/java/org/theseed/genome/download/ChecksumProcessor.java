@@ -68,7 +68,7 @@ public class ChecksumProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         if (this.genomeFile != null) {
             log.info("Genome IDs/names will be read from {}.", this.genomeFile);
             // Read all the genomes into the hash.
@@ -98,7 +98,6 @@ public class ChecksumProcessor extends BaseProcessor {
             }
         }
         log.info("{} files selected for MD5 analysis.", this.files.size());
-        return true;
     }
 
     @Override

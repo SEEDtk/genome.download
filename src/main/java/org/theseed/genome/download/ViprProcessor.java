@@ -57,7 +57,7 @@ public class ViprProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Verify that the input files exist.
         if (! this.gffFile.canRead())
             throw new FileNotFoundException("GFF file " + this.gffFile + " is not found or not readable.");
@@ -76,7 +76,6 @@ public class ViprProcessor extends BaseProcessor {
             log.info("Clearing output directory {}.", this.outDir);
             FileUtils.cleanDirectory(this.outDir);
         }
-        return true;
     }
 
     @Override

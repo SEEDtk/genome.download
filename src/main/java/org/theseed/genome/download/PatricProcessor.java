@@ -92,7 +92,7 @@ public class PatricProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Validate the output directory.
         if (! this.outDir.exists()) {
             // Here we must create it.
@@ -126,7 +126,6 @@ public class PatricProcessor extends BaseProcessor {
         }
         // Find the input column.
         this.colIdx = this.inStream.findField(this.column);
-        return true;
     }
 
     @Override

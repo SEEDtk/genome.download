@@ -146,7 +146,7 @@ public class SubsystemProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         if (this.batchSize < 1)
             throw new ParseFailureException("Invalid batch size.  Must be 1 or greater.");
         if (! this.coreDir.isDirectory())
@@ -194,7 +194,6 @@ public class SubsystemProcessor extends BaseProcessor {
         this.analyzers.add(new ProjectionSpreadsheetAnalyzer());
         this.analyzers.add(new TrackingSpreadsheetAnalyzer(this.errorFile));
         this.analyzers.add(new CountingSpreadsheetAnalyzer(this.roleCountFile));
-        return true;
     }
 
     @Override

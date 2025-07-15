@@ -79,7 +79,7 @@ public class Project1Processor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Load the subsystem projector.
         if (! this.projectorFile.canRead())
             throw new FileNotFoundException("Subsystem projector file " + this.projectorFile + " is not found or unreadable.");
@@ -103,7 +103,6 @@ public class Project1Processor extends BaseProcessor {
                 testStream.println("{}");
             }
         }
-        return true;
     }
 
     @Override

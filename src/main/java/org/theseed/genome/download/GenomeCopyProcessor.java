@@ -95,7 +95,7 @@ public class GenomeCopyProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Insure we create the output directory if it does not exist.
         if (! this.outDir.exists()) this.clearFlag = true;
         // Connect to it.
@@ -113,8 +113,7 @@ public class GenomeCopyProcessor extends BaseProcessor {
         for (File inDir : this.inDirs) {
             if (! inDir.exists())
                 throw new FileNotFoundException("Genome source " + inDir + " is not found.");
-        }
-        return true;
+        }    
     }
 
     @Override

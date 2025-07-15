@@ -60,7 +60,7 @@ public class ProjectionProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Verify the input files.
         if (! this.projectorFile.canRead())
             throw new FileNotFoundException("Projector file " + this.projectorFile + " not found or unreadable.");
@@ -82,7 +82,6 @@ public class ProjectionProcessor extends BaseProcessor {
         // Read the projector file.
         log.info("Reading subsystem projector from {}.", this.projectorFile);
         this.projector = SubsystemRuleProjector.load(this.projectorFile);
-        return true;
     }
 
     @Override

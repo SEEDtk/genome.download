@@ -65,7 +65,7 @@ public class SubMapProcesor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Do we have an old subsystem file?
         if (this.inFile.exists()) {
             // Yes.  Insure we can read it.
@@ -83,7 +83,6 @@ public class SubMapProcesor extends BaseProcessor {
             log.info("Creating new subsystem ID map.");
             this.subMap = new SubsystemIdMap();
         }
-        return true;
     }
 
     @Override

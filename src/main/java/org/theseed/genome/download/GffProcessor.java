@@ -69,7 +69,7 @@ public class GffProcessor extends BaseProcessor {
     }
 
     @Override
-    protected boolean validateParms() throws IOException, ParseFailureException {
+    protected void validateParms() throws IOException, ParseFailureException {
         // Insure the domain is valid.
         switch (this.domain) {
         case "Bacteria" :
@@ -90,7 +90,6 @@ public class GffProcessor extends BaseProcessor {
             log.info("Creating output directory {}.", this.outDir);
             FileUtils.forceMkdir(this.outDir);
         }
-        return true;
     }
 
     @Override

@@ -119,7 +119,7 @@ public class SeedProcessor extends BaseProcessor implements FileTarget.IParms {
     }
 
     @Override
-    protected boolean validateParms() throws IOException {
+    protected void validateParms() throws IOException {
         // Insure the input directory is valid.
         if (! this.coreDir.isDirectory())
             throw new FileNotFoundException("Input coreSEED directory " + this.coreDir + " not found or invalid.");
@@ -136,7 +136,6 @@ public class SeedProcessor extends BaseProcessor implements FileTarget.IParms {
         // Set up the output file stream.
         this.outputFolder = this.outType.create(this, this.outFile);
         log.info("Output will be to {} {}.", this.outType, this.outputFolder.getOutName());
-        return true;
     }
 
     @Override
