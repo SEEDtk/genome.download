@@ -18,7 +18,7 @@ import org.theseed.basic.ParseFailureException;
 import org.theseed.genome.iterator.GenomeTargetType;
 import org.theseed.genome.iterator.IGenomeTarget;
 import org.theseed.io.TabbedLineReader;
-import org.theseed.p3api.P3Connection;
+import org.theseed.p3api.P3CursorConnection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.utils.BaseInputProcessor;
 
@@ -111,7 +111,7 @@ public class SynchronizeProcessor extends BaseInputProcessor {
     protected void runReader(TabbedLineReader reader) throws Exception {
         // Connect to PATRIC.
         log.info("Connecting to PATRIC.");
-        P3Connection p3 = new P3Connection();
+        P3CursorConnection p3 = new P3CursorConnection();
         // First, delete the extras.
         Set<String> targetIDs = this.target.getGenomeIDs();
         log.info("Checking {} genomes to delete obsolete ones.", targetIDs.size());

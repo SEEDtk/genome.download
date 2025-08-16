@@ -12,11 +12,11 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.theseed.basic.BaseProcessor;
 import org.theseed.io.TabbedLineReader;
-import org.theseed.p3api.P3Connection;
+import org.theseed.p3api.P3CursorConnection;
 import org.theseed.p3api.P3Genome;
 import org.theseed.subsystems.core.SubsystemRuleProjector;
 
-/**
+
 /**
  * This downloads genomes from PATRIC and converts them into a GenomeDirectory; that is, a directory of GTOs.
  *
@@ -51,7 +51,7 @@ public class PatricProcessor extends BaseProcessor {
     /** subsystem projector */
     private SubsystemRuleProjector projector;
     /** connection to PATRIC */
-    private P3Connection p3;
+    private P3CursorConnection p3;
 
     // COMMAND-LINE OPTIONS
 
@@ -117,7 +117,7 @@ public class PatricProcessor extends BaseProcessor {
             this.inStream = new TabbedLineReader(this.inFile);
         }
         // Connect to PATRIC.
-        this.p3 = new P3Connection();
+        this.p3 = new P3CursorConnection();
         // Set up the subsystem projector.
         this.projector = null;
         if (this.projectorFile != null) {
