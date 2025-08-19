@@ -59,69 +59,27 @@ public class App
         BaseProcessor processor;
         // Determine the command to process.
         switch (command) {
-        case "fasta" :
-            processor = new FastaProcessor();
-            break;
-        case "fastaDir" :
-            processor = new FastaDirProcessor();
-            break;
-        case "ncbi" :
-            processor = new GffProcessor();
-            break;
-        case "vipr" :
-            processor = new ViprProcessor();
-            break;
-        case "patric" :
-            processor = new PatricProcessor();
-            break;
-        case "md5" :
-            processor = new ChecksumProcessor();
-            break;
-        case "core" :
-            processor = new CoreProcessor();
-            break;
-        case "subsystems" :
-            processor = new SubsystemProcessor();
-            break;
-        case "seed" :
-            processor = new SeedProcessor();
-            break;
-        case "subTable" :
-            processor = new SubTableProcessor();
-            break;
-        case "project" :
-            processor = new ProjectionProcessor();
-            break;
-        case "project1" :
-            processor = new Project1Processor();
-            break;
-        case "copy" :
-            processor = new GenomeCopyProcessor();
-            break;
-        case "list" :
-            processor = new MasterListProcessor();
-            break;
-        case "sync" :
-            processor = new SynchronizeProcessor();
-            break;
-        case "subMap" :
-            processor = new SubMapProcesor();
-            break;
-        case "sraMap" :
-            processor = new SraMapProcessor();
-            break;
-        case "sraFasta" :
-            processor = new SraFastaProcessor();
-            break;
-        case "dump" :
-        	processor = new GenomeDumpProcessor();
-        	break;
-        case "-h" :
-        case "--help" :
-            processor = null;
-            break;
-        default :
-            throw new RuntimeException("Invalid command " + command + ".");
+        case "fasta" -> processor = new FastaProcessor();
+        case "fastaDir" -> processor = new FastaDirProcessor();
+        case "ncbi" -> processor = new GffProcessor();
+        case "vipr" -> processor = new ViprProcessor();
+        case "patric" -> processor = new PatricProcessor();
+        case "md5" -> processor = new ChecksumProcessor();
+        case "core" -> processor = new CoreProcessor();
+        case "subsystems" -> processor = new SubsystemProcessor();
+        case "seed" -> processor = new SeedProcessor();
+        case "subTable" -> processor = new SubTableProcessor();
+        case "project" -> processor = new ProjectionProcessor();
+        case "project1" -> processor = new Project1Processor();
+        case "copy" -> processor = new GenomeCopyProcessor();
+        case "list" -> processor = new MasterListProcessor();
+        case "sync" -> processor = new SynchronizeProcessor();
+        case "subMap" -> processor = new SubMapProcesor();
+        case "sraMap" -> processor = new SraMapProcessor();
+        case "sraFasta" -> processor = new SraFastaProcessor();
+        case "dump" -> processor = new GenomeDumpProcessor();
+        case "-h", "--help" -> processor = null;
+        default -> throw new RuntimeException("Invalid command " + command + ".");
         }
         if (processor == null)
             BaseProcessor.showCommands(COMMANDS);

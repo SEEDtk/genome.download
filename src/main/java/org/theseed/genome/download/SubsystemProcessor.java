@@ -138,7 +138,7 @@ public class SubsystemProcessor extends BaseProcessor {
     @Override
     protected void setDefaults() {
         this.batchSize = 100;
-        this.analyzers = new ArrayList<SpreadsheetAnalyzer>(10);
+        this.analyzers = new ArrayList<>(10);
         this.clearFlag = false;
         this.roleFile = null;
         this.filterFile = null;
@@ -158,11 +158,11 @@ public class SubsystemProcessor extends BaseProcessor {
         log.info("Scanning genome directory for {}.", this.coreDir);
         this.genomes = GenomeSource.Type.CORE.create(this.coreDir);
         log.info("{} genomes found to process.  Batch size is {}.", this.genomes.size(), this.batchSize);
-        this.genomeMap = new HashMap<String, Genome>(this.batchSize);
-        this.gRoleMaps = new HashMap<String, Map<String, Set<String>>>(this.batchSize);
+        this.genomeMap = new HashMap<>(this.batchSize);
+        this.gRoleMaps = new HashMap<>(this.batchSize);
         // Create the subsystem projector and the directory map.
         this.projector = new SubsystemRuleProjector(this.roleFile);
-        this.subDirSet = new HashSet<File>();
+        this.subDirSet = new HashSet<>();
         // Set up the output directory.
         if (! this.outDir.isDirectory()) {
             log.info("Creating output directory {}.", this.outDir);
@@ -306,8 +306,8 @@ public class SubsystemProcessor extends BaseProcessor {
         this.projector.save(this.projectorFile);
         // Write out an updated copy of the role map
         log.info("Writing subsystem.roles.");
-        File roleFile = new File(this.outDir, "subsystem.roles");
-        this.projector.usefulRoles().save(roleFile);
+        File myRoleFile = new File(this.outDir, "subsystem.roles");
+        this.projector.usefulRoles().save(myRoleFile);
         // Terminate the analyzers.
         for (SpreadsheetAnalyzer analyzer : this.analyzers)
             analyzer.close();

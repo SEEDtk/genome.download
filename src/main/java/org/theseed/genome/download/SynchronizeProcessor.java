@@ -94,7 +94,7 @@ public class SynchronizeProcessor extends BaseInputProcessor {
         // Here we verify the input column and read in all the genome IDs.
         int colIdx = reader.findField(this.colName);
         int inCount = 0;
-        this.genomeIDs = new HashSet<String>(1000);
+        this.genomeIDs = new HashSet<>(1000);
         for (var line : reader) {
             String genomeID = line.get(colIdx);
             inCount++;

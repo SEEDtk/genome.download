@@ -91,7 +91,7 @@ public class GenomeCopyProcessor extends BaseProcessor {
         this.clearFlag = false;
         this.missingFlag = false;
         this.filterFile = null;
-        this.inDirs = new ArrayList<File>();
+        this.inDirs = new ArrayList<>();
     }
 
     @Override
@@ -128,7 +128,7 @@ public class GenomeCopyProcessor extends BaseProcessor {
             log.info("Copying genomes from {}.", inDir);
             GenomeSource genomes = this.inType.create(inDir);
             // Get a copy of the genome ID set for this source.
-            Set<String> genomeIds = new TreeSet<String>(genomes.getIDs());
+            Set<String> genomeIds = new TreeSet<>(genomes.getIDs());
             if (this.filterSet != null)
                 genomeIds.retainAll(this.filterSet);
             log.info("{} genomes will be copied.", genomeIds.size());
