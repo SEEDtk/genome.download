@@ -42,7 +42,7 @@ public class SubMapProcesor extends BaseProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(SubMapProcesor.class);
+    private static final Logger log = LoggerFactory.getLogger(SubMapProcesor.class);
     /** subsystem ID map */
     private SubsystemIdMap subMap;
     /** PATRIC connection for retrieving current subsystems */

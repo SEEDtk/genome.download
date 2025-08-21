@@ -22,9 +22,9 @@ public abstract class FileTarget implements AutoCloseable {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(FileTarget.class);
+    protected static final Logger log = LoggerFactory.getLogger(FileTarget.class);
     /** name of the output file or directory */
-    private File outName;
+    private final File outName;
     /** copy counter */
     private int copyCount;
 
@@ -84,11 +84,29 @@ public abstract class FileTarget implements AutoCloseable {
             File dir = new File(System.getProperty("user.dir"));
             var dform = new SimpleDateFormat("yyyy-MM-dd");
             String baseName = "core" + dform.format(new Date());
-            this.outName = this.defaultFileName(dir, baseName);
+            this.outName = computeDefaultFileName(this.getClass(), dir, baseName);
         } else
             this.outName = outFileName;
         // Denote no files have been copied yet.
         this.copyCount = 0;
+    }
+
+    /**
+     * Helper to compute the default file name using the correct subclass implementation.
+     *
+     * @param clazz     the class of the FileTarget
+     * @param dir       target directory
+     * @param baseName  base name of file
+     * @return the full file name
+     */
+    protected static File computeDefaultFileName(Class<?> clazz, File dir, String baseName) {
+        File retVal;
+        try (FileTarget temp = (FileTarget) clazz.getDeclaredConstructor(File.class).newInstance((File) null)) {
+            retVal = temp.defaultFileName(dir, baseName);
+        } catch (Exception e) {
+            throw new RuntimeException("Error computing default file name", e);
+        }
+        return retVal;
     }
 
     /**

@@ -4,8 +4,6 @@
 package org.theseed.p3api;
 
 import java.util.Collection;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.theseed.sequence.Sequence;
 
 /**
@@ -18,10 +16,8 @@ import org.theseed.sequence.Sequence;
 public abstract class SequenceReader {
 
     // FIELDS
-    /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(SequenceReader.class);
     /** connection to PATRIC */
-    private P3Connection p3;
+    private final P3Connection p3;
 
     /**
      * This enumeration describes the different sequence reader types.

@@ -10,6 +10,8 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.theseed.basic.BaseProcessor;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.p3api.P3CursorConnection;
@@ -44,6 +46,8 @@ import org.theseed.subsystems.core.SubsystemRuleProjector;
 public class PatricProcessor extends BaseProcessor {
 
     // FIELDS
+    /** logging facility */
+    private static final Logger log = LoggerFactory.getLogger(PatricProcessor.class);
     /** genome ID input stream */
     private TabbedLineReader inStream;
     /** genome ID input column */

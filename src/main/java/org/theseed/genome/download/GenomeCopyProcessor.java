@@ -50,7 +50,7 @@ public class GenomeCopyProcessor extends BaseProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(GenomeCopyProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(GenomeCopyProcessor.class);
     /** output master directory */
     private IGenomeTarget targetDir;
     /** filter set, or NULL if there is no filtering */

@@ -37,7 +37,7 @@ public class GffProcessor extends BaseProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(GffProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(GffProcessor.class);
 
     // COMMAND-LINE OPTIONS
 

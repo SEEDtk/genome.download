@@ -6,8 +6,6 @@ package org.theseed.subsystems;
 import java.util.Map;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.theseed.genome.Feature;
 import org.theseed.genome.Genome;
 import org.theseed.subsystems.core.SubsystemDescriptor;
@@ -24,8 +22,6 @@ import org.theseed.subsystems.core.SubsystemDescriptor;
 public abstract class SpreadsheetAnalyzer {
 
     // FIELDS
-    /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(SpreadsheetAnalyzer.class);
     /** current genome */
     private Genome genome;
     /** current subsystem */

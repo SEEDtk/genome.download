@@ -10,6 +10,8 @@ import java.io.UncheckedIOException;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.theseed.genome.Feature;
 
 /**
@@ -21,6 +23,8 @@ import org.theseed.genome.Feature;
 public class TrackingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
 
     // FIELDS
+    /** logging facility */
+    private static final Logger log = LoggerFactory.getLogger(TrackingSpreadsheetAnalyzer.class);
     /** output stream for report */
     private PrintWriter outStream;
     /** current variant code */

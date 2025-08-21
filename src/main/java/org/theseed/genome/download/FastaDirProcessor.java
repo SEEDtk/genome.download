@@ -49,7 +49,7 @@ public class FastaDirProcessor extends BaseInputProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(FastaDirProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(FastaDirProcessor.class);
     /** sequence reader for downloading the genomes */
     private SequenceReader seqReader;
     /** set of genome IDs to process */

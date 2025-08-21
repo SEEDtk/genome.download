@@ -34,7 +34,7 @@ public class ProjectionProcessor extends BaseProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(ProjectionProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(ProjectionProcessor.class);
     /** subsystem projector */
     private SubsystemRuleProjector projector;
 

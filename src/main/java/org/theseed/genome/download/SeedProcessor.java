@@ -14,6 +14,8 @@ import org.theseed.genome.core.OrganismDirectories;
 import org.theseed.io.FileTarget;
 import org.theseed.subsystems.SubsystemFilter;
 import org.kohsuke.args4j.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.kohsuke.args4j.Argument;
 import org.apache.commons.lang3.StringUtils;
 
@@ -40,6 +42,8 @@ import org.apache.commons.lang3.StringUtils;
 public class SeedProcessor extends BaseProcessor implements FileTarget.IParms {
 
     // FIELDS
+    /** logging facility */
+    private static final Logger log = LoggerFactory.getLogger(SeedProcessor.class);
     /** input subsystem directory */
     private File subsysIn;
     /** input organism directory */
@@ -132,7 +136,7 @@ public class SeedProcessor extends BaseProcessor implements FileTarget.IParms {
         this.orgOut = "Organisms/";
         // Create the subsystem ID map if we are doing the Windows filtering.
         if (this.winFlag)
-            this.subIDs = new HashSet<String>(2000);
+            this.subIDs = new HashSet<>(2000);
         // Set up the output file stream.
         this.outputFolder = this.outType.create(this, this.outFile);
         log.info("Output will be to {} {}.", this.outType, this.outputFolder.getOutName());

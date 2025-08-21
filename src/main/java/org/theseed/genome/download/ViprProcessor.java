@@ -10,6 +10,8 @@ import java.util.Collection;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.commons.io.FileUtils;
 import org.theseed.basic.BaseProcessor;
 import org.theseed.genome.ViprGenome;
@@ -32,6 +34,10 @@ import org.theseed.genome.ViprGenome;
  *
  */
 public class ViprProcessor extends BaseProcessor {
+
+    // FIELDS
+    /** logging facility */
+    private static final Logger log = LoggerFactory.getLogger(ViprProcessor.class);
 
     // COMMAND-LINE OPTIONS
 

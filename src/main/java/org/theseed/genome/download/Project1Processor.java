@@ -43,7 +43,7 @@ public class Project1Processor extends BaseProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(Project1Processor.class);
+    private static final Logger log = LoggerFactory.getLogger(Project1Processor.class);
     /** subsystem projector */
     private SubsystemRuleProjector projector;
     /** target GTO */

@@ -18,6 +18,8 @@ import java.util.stream.Stream;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.theseed.basic.BaseProcessor;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.sequence.FastaInputStream;
@@ -43,6 +45,8 @@ import org.theseed.sequence.MD5Hex;
 public class ChecksumProcessor extends BaseProcessor {
 
     // FIELDS
+    /** logging facility */
+    private static final Logger log = LoggerFactory.getLogger(ChecksumProcessor.class);
     /** hash of checksums to genome_id/name */
     private Map<String, String> checkMap;
     /** MD5 computer */
@@ -62,8 +66,8 @@ public class ChecksumProcessor extends BaseProcessor {
 
     @Override
     protected void setDefaults() {
-        this.checkMap = new HashMap<String, String>();
-        this.files = new ArrayList<File>(100);
+        this.checkMap = new HashMap<>();
+        this.files = new ArrayList<>(100);
         this.genomeFile = null;
     }
 

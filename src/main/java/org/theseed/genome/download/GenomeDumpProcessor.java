@@ -67,7 +67,7 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(GenomeDumpProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(GenomeDumpProcessor.class);
     /** genome list */
     private Set<String> genomes;
     /** number of genomes output */

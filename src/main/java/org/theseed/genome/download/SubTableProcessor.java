@@ -32,7 +32,7 @@ public class SubTableProcessor extends BaseProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(SubTableProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(SubTableProcessor.class);
 
     // COMMAND-LINE OPTIONS
 

@@ -64,7 +64,7 @@ public class SraMapProcessor extends BasePipeProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(SraMapProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(SraMapProcessor.class);
     /** genome names for current batch */
     private Map<String, String> nameMap;
     /** genome IDs for current batch */

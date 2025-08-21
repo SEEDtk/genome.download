@@ -47,7 +47,7 @@ public class SynchronizeProcessor extends BaseInputProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(SynchronizeProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(SynchronizeProcessor.class);
     /** genome target to synchronize */
     private IGenomeTarget target;
     /** set of genome IDs to synchronize with */

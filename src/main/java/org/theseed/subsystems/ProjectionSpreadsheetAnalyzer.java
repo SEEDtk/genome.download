@@ -8,7 +8,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.theseed.genome.Feature;
 import org.theseed.subsystems.core.SubsystemDescriptor;
 
@@ -21,6 +22,8 @@ import org.theseed.subsystems.core.SubsystemDescriptor;
 public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
 
     // FIELDS
+    /** logging facility */
+    private static final Logger log = LoggerFactory.getLogger(ProjectionSpreadsheetAnalyzer.class);
     /** current variant specification */
     private VariantDef variant;
     /** TRUE if this variant can be projected */
@@ -32,7 +35,7 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     /** number of distinct specifications */
     private int specCount;
     /** set of distinct variant specifications found */
-    private Set<VariantDef> variants;
+    private final Set<VariantDef> variants;
 
     /**
      * This object describes a variant.
@@ -40,11 +43,11 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
     protected static class VariantDef {
 
         /** parent subsystem name */
-        private String subsysName;
+        private final String subsysName;
         /** variant code */
-        private String vCode;
+        private final String vCode;
         /** map of present roles */
-        private BitSet roles;
+        private final BitSet roles;
 
         protected VariantDef(SubsystemDescriptor subsys, String variantCode) {
             this.subsysName = subsys.getName();
@@ -93,7 +96,7 @@ public class ProjectionSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         this.goodRowCount = 0;
         this.specCount = 0;
         // Set up the variant specification set.
-        this.variants = new HashSet<VariantDef>(4000);
+        this.variants = new HashSet<>(4000);
     }
 
     @Override

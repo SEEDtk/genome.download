@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.theseed.counters.CountMap;
 import org.theseed.genome.Feature;
 import org.theseed.subsystems.core.SubsystemDescriptor;
@@ -24,6 +26,24 @@ import org.theseed.subsystems.core.SubsystemDescriptor;
  */
 public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
 
+    // FIELDS
+    /** logging facility */
+    private static final Logger log = LoggerFactory.getLogger(CountingSpreadsheetAnalyzer.class);
+    /** output file for report */
+    private PrintWriter outStream;
+    /** map of subsystems to cell specifiers */
+    private final Map<SubsystemDescriptor, CellSpec[]> countingMap;
+    /** currently-active cell-specification array */
+    private CellSpec[] currentCounts;
+    /** number of variants with incorrect roles */
+    private int badVariants;
+    /** TRUE if the current variant has incorrect roles */
+    private boolean badRoles;
+    /** heading columns for report */
+    private final String TRACKING_HEADER = "Subsystem\tCell_Index\tRole\tCount";
+    /** format for report lines */
+    private final String TRACKING_FORMAT = "%s\t%d%c\t%s\t%d%n";
+
     /**
      * This object represents the roles found in a spreadsheet cell.  It counts the number of good
      * roles, and the number of occurrences for each incorrect role.
@@ -34,7 +54,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         /** total number of features */
         private int totalCount;
         /** number of features for each incorrect role */
-        private CountMap<String> badCounts;
+        private final CountMap<String> badCounts;
 
         /**
          * Create a new cell counter.
@@ -44,7 +64,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         private CellSpec() {
             this.goodCount = 0;
             this.totalCount = 0;
-            this.badCounts = new CountMap<String>();
+            this.badCounts = new CountMap<>();
         }
 
         /**
@@ -74,21 +94,6 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
 
     }
 
-    // FIELDS
-    /** output file for report */
-    private PrintWriter outStream;
-    /** map of subsystems to cell specifiers */
-    private Map<SubsystemDescriptor, CellSpec[]> countingMap;
-    /** currently-active cell-specification array */
-    private CellSpec[] currentCounts;
-    /** number of variants with incorrect roles */
-    private int badVariants;
-    /** TRUE if the current variant has incorrect roles */
-    private boolean badRoles;
-    /** heading columns for report */
-    private final String TRACKING_HEADER = "Subsystem\tCell_Index\tRole\tCount";
-    /** format for report lines */
-    private final String TRACKING_FORMAT = "%s\t%d%c\t%s\t%d%n";
 
     /**
      * Set up to produce the role-tracking report.
@@ -107,7 +112,7 @@ public class CountingSpreadsheetAnalyzer extends SpreadsheetAnalyzer {
         }
         this.outStream.println(TRACKING_HEADER);
         // Create the count map.  Note we sort by subsystem name.
-        this.countingMap = new TreeMap<SubsystemDescriptor, CellSpec[]>();
+        this.countingMap = new TreeMap<>();
     }
 
     @Override

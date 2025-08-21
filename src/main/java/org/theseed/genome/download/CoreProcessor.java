@@ -36,7 +36,7 @@ public class CoreProcessor extends BaseProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(CoreProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(CoreProcessor.class);
 
     // COMMAND-LINE OPTIONS
 

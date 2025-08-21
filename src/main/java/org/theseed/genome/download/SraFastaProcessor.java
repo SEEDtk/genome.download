@@ -44,7 +44,7 @@ public class SraFastaProcessor extends BaseInputProcessor {
 
     // FIELDS
     /** logging facility */
-    protected static Logger log = LoggerFactory.getLogger(SraFastaProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(SraFastaProcessor.class);
     /** column index of sample ID column */
     private int sampleIdColIdx;
     /** column index of genome ID column */
