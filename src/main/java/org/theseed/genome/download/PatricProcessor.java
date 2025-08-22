@@ -6,21 +6,28 @@ package org.theseed.genome.download;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.theseed.basic.BaseProcessor;
+import org.theseed.genome.Genome;
+import org.theseed.genome.iterator.GenomeTargetType;
+import org.theseed.genome.iterator.IGenomeTarget;
 import org.theseed.io.TabbedLineReader;
 import org.theseed.p3api.P3CursorConnection;
 import org.theseed.p3api.P3Genome;
+import org.theseed.p3api.P3GenomeBatch;
 import org.theseed.subsystems.core.SubsystemRuleProjector;
 
 
 /**
- * This downloads genomes from PATRIC and converts them into a GenomeDirectory; that is, a directory of GTOs.
+ * This downloads genomes from PATRIC and stores them in a genome target, which is a directory or file of
+ * genome data.
  *
  * The positional parameter is the name of the output directory.
  *
@@ -33,11 +40,12 @@ import org.theseed.subsystems.core.SubsystemRuleProjector;
  * -v		display more progress information on the log
  * -c		index (1-based) or name of the input column containing the genome IDs
  * -i		if specifed, the name of a file to be used as the input (instead of STDIN)
+ * -b       batch size for downloads (default 200)
  *
+ * --target     type of genome target; the default is DIR (GTO directory)
  * --clear		erase the output directory before proceeding
  * --missing	only download genomes not already present
  * --projector	if specified, the name of a subsystem projector file for computing the subsystems
- * --subsystems	if specified, subsystems will be downloaded from PATRIC
  * --level		detail level to download; the default is FULL
  *
  * @author Bruce Parrello
@@ -56,14 +64,24 @@ public class PatricProcessor extends BaseProcessor {
     private SubsystemRuleProjector projector;
     /** connection to PATRIC */
     private P3CursorConnection p3;
+    /** output genome target */
+    private IGenomeTarget genomeTarget;
+    /** set of genomes already in the target */
+    private Set<String> existingGenomes;
 
     // COMMAND-LINE OPTIONS
 
+    /** index (1-based) or name of genome ID column */
     @Option(name = "-c", aliases = { "--col", "--column" }, metaVar = "1", usage = "index (1-based) or name of genome ID column")
     private String column;
 
+    /** name of input file (if not STDIN) */
     @Option(name = "-i", aliases = { "--input" }, metaVar = "genomeList.tbl", usage = "name of input file (if not STDIN)")
     private File inFile;
+
+    /** batch size for downloads */
+    @Option(name = "-b", aliases = { "--batch" }, metaVar = "100", usage = "batch size for downloads")
+    private int batchSize;
 
     /** TRUE to clear the output directory during initialization */
     @Option(name = "--clear", usage = "erase output directory before starting")
@@ -81,6 +99,10 @@ public class PatricProcessor extends BaseProcessor {
     @Option(name = "--level", usage = "detail level needed for the genome")
     private P3Genome.Details level;
 
+    /** type of genome target */
+    @Option(name = "--target", usage = "type of genome target; the default is DIR (GTO directory)")
+    private GenomeTargetType targetType;
+
     /** name of the output directory */
     @Argument(index = 0, metaVar = "outDir", usage = "name of the output directory", required = true)
     private File outDir;
@@ -89,26 +111,32 @@ public class PatricProcessor extends BaseProcessor {
     protected void setDefaults() {
         this.column = "genome_id";
         this.inFile = null;
+        this.targetType = GenomeTargetType.DIR;
         this.clearOutput = false;
         this.missingOnly = false;
         this.projectorFile = null;
+        this.batchSize = 200;
         this.level = P3Genome.Details.FULL;
     }
 
     @Override
     protected void validateParms() throws IOException {
-        // Validate the output directory.
-        if (! this.outDir.exists()) {
-            // Here we must create it.
-            log.info("Creating output directory {}.", this.outDir);
-            if (! this.outDir.mkdirs())
-                throw new IOException("Could not create output directory " + this.outDir + ".");
-        } else if (! this.outDir.isDirectory()) {
-            throw new FileNotFoundException("Output directory " + this.outDir + " is invalid.");
-        } else if (this.clearOutput) {
-            // Here we have to erase the directory before we put new stuff in.
-            log.info("Clearing output directory {}.", this.outDir);
-            FileUtils.cleanDirectory(this.outDir);
+        // Validate the batch size.
+        if (this.batchSize < 1)
+            throw new IOException("Batch size must be at least 1.");
+        log.info("Output will be to {} target {}.", this.targetType, this.outDir);
+        // Validate the output directory and connect to it.
+        this.genomeTarget = this.targetType.create(this.outDir, this.clearOutput);
+        // If we have the missing option set, check for existing genomes.
+        if (! this.missingOnly)
+            this.existingGenomes = Collections.emptySet();
+        else try {
+            this.existingGenomes = this.genomeTarget.getGenomeIDs();
+        } catch (UnsupportedOperationException e) {
+            // Here we have one of the single-file outputs that does not support figuring out what is
+            // already in the target.
+            log.warn("The genome target type {} does not allow the --missing option.", this.targetType);
+            this.existingGenomes = Collections.emptySet();
         }
         // Set up the input.
         if (this.inFile == null) {
@@ -135,35 +163,61 @@ public class PatricProcessor extends BaseProcessor {
     @Override
     public void runCommand() throws Exception {
         try {
-            // Count the genomes written.
+            // Count the genome IDs read.
             int gCount = 0;
+            // Count the genomes skipped.
+            int skipCount = 0;
+            // Count the number of batches.
+            int batchCount = 0;
+            // This will hold the current batch of genome IDs.
+            Set<String> genomeIds = new HashSet<>(this.batchSize * 4 / 3 + 1);
             // Loop through the input file, processing genome IDs.
             for (TabbedLineReader.Line line : this.inStream) {
                 String genomeId = line.get(this.colIdx);
-                log.info("Processing {}.", genomeId);
-                File outFile = new File(this.outDir, genomeId + ".gto");
-                if (this.missingOnly && outFile.exists()) {
-                    log.info("{} already present-- skipped.", outFile);
-                } else {
-                    P3Genome genome = P3Genome.load(this.p3, genomeId, this.level);
-                    if (genome == null)
-                        log.error("Genome {} not found.", genomeId);
-                    else {
-                        // Project subsystems if we have a projector. Note we specify TRUE
-                        // to restrict to active subsystems.
-                        if (this.projector != null)
-                            this.projector.project(genome, true);
-                        // Write the genome.
-                        log.info("Writing {} to {}.", genome, outFile);
-                        genome.save(outFile);
-                        gCount++;
+                gCount++;
+                // Only proceed if we are NOT skipping this genome.
+                if (! this.existingGenomes.contains(genomeId))
+                    skipCount++;
+                else {
+                    // Ensure there is room for this genome.
+                    if (genomeIds.size() >= this.batchSize) {
+                        // Process the current batch.
+                        batchCount++;
+                        log.info("Processing batch {} of {} genomes.", batchCount, genomeIds.size());
+                        this.processBatch(genomeIds);
+                        genomeIds.clear();
                     }
+                    // Add this genome ID to the current batch.
+                    genomeIds.add(genomeId);
                 }
             }
-            log.info("All done. {} genomes output.", gCount);
+            // Process the residual batch (if any).
+            if (! genomeIds.isEmpty()) {
+                batchCount++;
+                log.info("Processing final batch of {} genomes.", genomeIds.size());
+                this.processBatch(genomeIds);
+            }
+            log.info("All done. {} genomes found, {} skipped, {} batches processed.", gCount, skipCount, batchCount);
         } finally {
             // Close the input file.
             this.inStream.close();
+        }
+    }
+
+    /**
+     * Load a batch of genomes and store them in the target. We also do subsystem projection here.
+     * 
+     * @param genomeIds     IDs of the genomes to load.
+     * 
+     * @throws IOException 
+     */
+    private void processBatch(Set<String> genomeIds) throws IOException {
+        P3GenomeBatch batch = new P3GenomeBatch(this.p3, genomeIds, this.level);
+        // Loop through the genomes.
+        for (Genome genome : batch) {
+            if (this.projector != null)
+                this.projector.project(genome, true);
+            this.genomeTarget.add(genome);
         }
     }
 
