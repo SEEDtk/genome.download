@@ -176,7 +176,7 @@ public class PatricProcessor extends BaseProcessor {
                 String genomeId = line.get(this.colIdx);
                 gCount++;
                 // Only proceed if we are NOT skipping this genome.
-                if (! this.existingGenomes.contains(genomeId))
+                if (this.existingGenomes.contains(genomeId))
                     skipCount++;
                 else {
                     // Ensure there is room for this genome.
