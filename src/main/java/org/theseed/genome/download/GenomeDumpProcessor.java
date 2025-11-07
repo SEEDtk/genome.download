@@ -59,6 +59,7 @@ import com.github.cliftonlabs.json_simple.Jsoner;
  * --clear		erase output directory before processing
  * --missing	only process output directories that do not yet exist
  * --para		use parallel processing to improve performance
+ * --verify     search for and fix incomplete directories
  *
  * @author Bruce Parrello
  *
@@ -108,6 +109,10 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
     @Option(name = "--missing", usage = "if specified, genomes already in the output directory will be dumped")
     private boolean missingFlag;
 
+    /** if specified, only incomplete directories will be dumped; mutually exclusive with missing */
+    @Option(name = "--verify", usage = "if specified, only incomplete directories will be dumped")
+    private boolean verifyFlag;
+
     /** if specified, genomes will be dumped in parallel */
     @Option(name = "--para", usage = "if specified, genomes will be processed in parallel")
     private boolean paraFlag;
@@ -126,6 +131,7 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
         this.clearFlag = false;
         this.missingFlag = false;
         this.batchSize = 10;
+        this.verifyFlag = false;
     }
 
     @Override
@@ -134,6 +140,8 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
             log.info("Parallel processing will be used.");
         if (this.batchSize < 1)
             throw new ParseFailureException("Batch size must be at least 1.");
+        if (this.verifyFlag && this.missingFlag)
+            throw new ParseFailureException("Cannot specify both --missing and --verify.");
         // Insure the output directory exists.
         if (! this.outDir.isDirectory()) {
             log.info("Creating output directory {}.", this.outDir);
@@ -240,29 +248,51 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
                         log.warn("Genome {} has an unsupported domain \"{}\".", genomeId, domain);
                         invalid = true;
                     } else {
-                        // Here we are at the point we can actually dump the files. First, create
-                        // the output directory and write the genome file.
-                        log.info("Dumping genome {} of {}: {} {}", gNum, this.genomeTotal, genomeId,
-                                genomeName);
-                        FileUtils.forceMkdir(genomeDir);
-                        this.writeFile(genomeDir, "genome", jsonList);
-                        files++;
-                        // For log purposes, get the total number of files we're dumping.
-                        final int nFiles = coreNames.length + 1;
-                        // Now loop through the other cores.
-                        for (String coreName : coreNames) {
-                            // Check for an odd criterion.
-                            String criterion1 = switch (coreName) {
-                                case null -> selectGenome;
-                                case "ppi" -> Criterion.EQ("genome_id_a", genomeId);
-                                case "epitope" -> Criterion.EQ("organism", genomeName);
-                                default -> selectGenome;
-                            };
-                            // Get the genome's records.
-                            jsonList = p3.getRecords(coreName, criterion1);
-                            this.writeFile(genomeDir, coreName, jsonList);
+                        // Here we are at the point we can actually dump the files. If this is verify mode, we
+                        // only dump if the directory exists and contains a subset of the files. Otherwise,
+                        // we create the output directory and write everything.
+                        if (this.verifyFlag) {
+                            if (! genomeDir.isDirectory())
+                                skipped = true;
+                            else {
+                                // Here we can do a dump in verify mode.
+                                log.info("Verifying genome {} of {}: {} {}", gNum, this.genomeTotal, genomeId,
+                                        genomeName);
+                                // Check the genome core first.
+                                File outFile = new File(genomeDir, "genome.json");
+                                if (! outFile.exists()) {
+                                    log.info("Fixing genome core for {}", genomeDir);
+                                    this.writeFile(genomeDir, "genome", jsonList);
+                                    files++;
+                                }
+                                // Now fix the other cores.
+                                for (String coreName : coreNames) {
+                                    if (coreName != null) {
+                                        outFile = new File(genomeDir, coreName + ".json");
+                                        if (! outFile.exists()) {
+                                            // Here the core is missing, so we dump it.
+                                            log.info("Fixing core {} for {}.", coreName, genomeDir);
+                                            this.dumpCore(genomeId, p3, genomeDir, genomeName, coreName);
+                                            files++;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // This is a normal genome dump.
+                            log.info("Dumping genome {} of {}: {} {}", gNum, this.genomeTotal, genomeId,
+                                    genomeName);
+                            FileUtils.forceMkdir(genomeDir);
+                            this.writeFile(genomeDir, "genome", jsonList);
                             files++;
-                            log.info("File {} of {} for {} completed.", files, nFiles, genomeId);
+                            // For log purposes, get the total number of files we're dumping.
+                            final int nFiles = coreNames.length + 1;
+                            // Now loop through the other cores.
+                            for (String coreName : coreNames) {
+                                this.dumpCore(genomeId, p3, genomeDir, genomeName, coreName);
+                                files++;
+                                log.info("File {} of {} for {} completed.", files, nFiles, genomeId);
+                            }
                         }
                     }
                 }
@@ -279,6 +309,32 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
             // All exceptions from this method must be unchecked, since it is used in a stream.
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Dump a single genome core to the output.
+     * 
+     * @param genomeId          ID of the genome to dump
+     * @param p3                P3 connection to use
+     * @param genomeDir         output genome directory
+     * @param genomeName        genome name for epitope searches
+     * @param coreName          name of the SOLR core to dump
+     * 
+     * @throws IOException
+     */
+    private void dumpCore(String genomeId, RawP3Connection p3, File genomeDir,
+            String genomeName, String coreName) throws IOException {
+        List<JsonObject> jsonList;
+        // Build the selection criterion.
+        String criterion1 = switch (coreName) {
+            case null -> Criterion.EQ("genome_id", genomeId);
+            case "ppi" -> Criterion.EQ("genome_id_a", genomeId);
+            case "epitope" -> Criterion.EQ("organism", genomeName);
+            default -> Criterion.EQ("genome_id", genomeId);
+        };
+        // Get the genome's records.
+        jsonList = p3.getRecords(coreName, criterion1);
+        this.writeFile(genomeDir, coreName, jsonList);
     }
 
     /**
