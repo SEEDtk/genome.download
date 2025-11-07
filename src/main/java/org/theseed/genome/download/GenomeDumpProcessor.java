@@ -148,7 +148,7 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
     @Override
     protected void validateReaderInput(TabbedLineReader reader) throws IOException {
         // Here we get the set of genome IDs to read.
-        this.genomes = new HashSet<String>(1000);
+        this.genomes = new HashSet<>(1000);
         // Find the input column index.
         int idColIdx = reader.findField(this.idCol);
         // Loop through the input file.
@@ -170,7 +170,7 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
         this.fileCount = 0;
         this.doneCount = 0;
         // Create the batch holder.
-        List<String> batch = new ArrayList<String>(this.batchSize);
+        List<String> batch = new ArrayList<>(this.batchSize);
         // Loop through the genome IDs, processing batches.
         for (String genomeId : this.genomes) {
             // Insure there is room for this genome.
@@ -252,17 +252,12 @@ public class GenomeDumpProcessor extends BaseInputProcessor {
                         // Now loop through the other cores.
                         for (String coreName : coreNames) {
                             // Check for an odd criterion.
-                            String criterion1;
-                            switch (coreName) {
-                            case "ppi" :
-                                criterion1 = Criterion.EQ("genome_id_a", genomeId);
-                                break;
-                            case "epitope" :
-                                criterion1 = Criterion.EQ("organism", genomeName);
-                                break;
-                            default:
-                                criterion1 = selectGenome;
-                            }
+                            String criterion1 = switch (coreName) {
+                                case null -> selectGenome;
+                                case "ppi" -> Criterion.EQ("genome_id_a", genomeId);
+                                case "epitope" -> Criterion.EQ("organism", genomeName);
+                                default -> selectGenome;
+                            };
                             // Get the genome's records.
                             jsonList = p3.getRecords(coreName, criterion1);
                             this.writeFile(genomeDir, coreName, jsonList);
