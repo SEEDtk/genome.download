@@ -19,7 +19,7 @@ import org.theseed.genome.core.OrganismDirectories;
 import org.theseed.p3api.P3Connection;
 
 /**
- * This command reads genomes from a SEED organism directory.  The positional parameters are the name of the input directory
+ * This command copies genomes from a SEED organism directory.  The positional parameters are the name of the input directory
  * and the name of the output directory.
  *
  * The command-line options are as follows.

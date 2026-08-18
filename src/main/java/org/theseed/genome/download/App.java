@@ -26,6 +26,7 @@ import org.theseed.basic.BaseProcessor;
  * sraFasta		create a FASTA pseudo-sample directory from sraMap output
  * project1		project subsystems into a single GTO
  * dump			dump genomes from BV-BRC
+ * md5Survey    find genomes in the BV-BRC that are sequence-identical to genomes in a genome source
  *
  */
 public class App
@@ -49,7 +50,8 @@ public class App
              "subMap", "create a map from subsystem IDs to subsystem names",
              "sraMap", "list SRA samples corresponding to PATRIC genomes",
              "sraFasta", "create a FASTA pseudo-sample directory from sraMap output",
-             "dump", "dump genomes from BV-BRC"
+             "dump", "dump genomes from BV-BRC",
+             "md5Survey", "find genomes in the BV-BRC that are sequence-identical to genomes in a genome source"
     };
 
     public static void main( String[] args ) {
@@ -78,6 +80,7 @@ public class App
         case "sraMap" -> processor = new SraMapProcessor();
         case "sraFasta" -> processor = new SraFastaProcessor();
         case "dump" -> processor = new GenomeDumpProcessor();
+        case "md5Survey" -> processor = new Md5SurveyProcessor();
         case "-h", "--help" -> processor = null;
         default -> throw new RuntimeException("Invalid command " + command + ".");
         }
