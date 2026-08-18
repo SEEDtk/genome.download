@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 /**
  * This object represents a destination for a hierarchy of files in folders.  It can either be the
  * file system or an archive stream.
+ * 
+ * The subclass must provide a default file name if the user does not specify one. The methods "getBaseDir" and "getBaseName" provide
+ * the current working directory and a dated file base name to help this process.
  *
  * @author Bruce Parrello
  *
@@ -23,10 +26,12 @@ public abstract class FileTarget implements AutoCloseable {
     // FIELDS
     /** logging facility */
     protected static final Logger log = LoggerFactory.getLogger(FileTarget.class);
-    /** name of the output file or directory */
-    private final File outName;
     /** copy counter */
     private int copyCount;
+    /** base name for default file name computation */
+    private final String baseName;
+    /** base directory for default file name computation */
+    private final File baseDir;
 
     /**
      * This interface describes the parameters required for any controlling command processor
@@ -74,50 +79,29 @@ public abstract class FileTarget implements AutoCloseable {
 
     /**
      * Construct a new file destination object.
-     *
-     * @param outFileName	name of the output file or directory, or NULL to use the default
      */
-    public FileTarget(File outFileName) {
-        if (outFileName == null) {
-            // Here we need the default file name.  It is put in the current directory and has the date built
-            // in.
-            File dir = new File(System.getProperty("user.dir"));
-            var dform = new SimpleDateFormat("yyyy-MM-dd");
-            String baseName = "core" + dform.format(new Date());
-            this.outName = computeDefaultFileName(this.getClass(), dir, baseName);
-        } else
-            this.outName = outFileName;
+    public FileTarget() {
+        // Save the base name and directory for default file name computation.
+        var dform = new SimpleDateFormat("yyyy-MM-dd");
+        this.baseName = "core" + dform.format(new Date());
+        this.baseDir = new File(System.getProperty("user.dir"));
         // Denote no files have been copied yet.
         this.copyCount = 0;
     }
 
     /**
-     * Helper to compute the default file name using the correct subclass implementation.
-     *
-     * @param clazz     the class of the FileTarget
-     * @param dir       target directory
-     * @param baseName  base name of file
-     * @return the full file name
+     * @return the default base directory
      */
-    protected static File computeDefaultFileName(Class<?> clazz, File dir, String baseName) {
-        File retVal;
-        try (FileTarget temp = (FileTarget) clazz.getDeclaredConstructor(File.class).newInstance((File) null)) {
-            retVal = temp.defaultFileName(dir, baseName);
-        } catch (Exception e) {
-            throw new RuntimeException("Error computing default file name", e);
-        }
-        return retVal;
+    public File getBaseDir() {
+        return this.baseDir;
     }
 
     /**
-     * Compute the default file name for this type.
-     *
-     * @param dir		target directory
-     * @param baseName	base name of file
-     *
-     * @return the full file name
+     * @return the default base file name
      */
-    protected abstract File defaultFileName(File dir, String baseName);
+    public String getBaseName() {
+        return this.baseName;
+    }
 
     /**
      * Start a new directory with the specified name.
@@ -171,13 +155,12 @@ public abstract class FileTarget implements AutoCloseable {
     /**
      * @return the output file/directory name
      */
-    public File getOutName() {
-        return this.outName;
-    }
+    public abstract File getOutName();
 
     @Override
     public int hashCode() {
-        int result = ((this.outName == null) ? 0 : this.outName.hashCode());
+        File outName = this.getOutName();
+        int result = ((outName == null) ? 0 : outName.hashCode());
         return result;
     }
 
@@ -190,11 +173,13 @@ public abstract class FileTarget implements AutoCloseable {
             return false;
         }
         FileTarget other = (FileTarget) obj;
-        if (this.outName == null) {
-            if (other.outName != null) {
+        File myName = this.getOutName();
+        File otherName = other.getOutName();
+        if (myName == null) {
+            if (otherName != null) {
                 return false;
             }
-        } else if (!this.outName.equals(other.outName)) {
+        } else if (!myName.equals(otherName)) {
             return false;
         }
         return true;

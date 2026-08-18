@@ -16,24 +16,27 @@ import org.apache.commons.io.FileUtils;
  */
 public class DirFileTarget extends FileTarget {
 
+    // FIELDS
+    /** output directory */
+    private final File outFile;
+
     public DirFileTarget(IParms processor, File outFileName) throws IOException {
-        super(outFileName);
+        super();
         // If the output file name is NULL, this gets us the default name; otherwise, it
         // returns the caller-supplied name.
-        File outFile = this.getOutName();
-        if (! outFile.isDirectory()) {
-            log.info("Creating output directory {}.", outFile);
-            FileUtils.forceMkdir(outFile);
+        if (outFileName == null)
+            this.outFile = new File(this.getBaseDir(), this.getBaseName());
+        else
+            this.outFile = outFileName;
+        if (! this.outFile.isDirectory()) {
+            log.info("Creating output directory {}.", this.outFile);
+            FileUtils.forceMkdir(this.outFile);
         } else if (processor.shouldErase()) {
-            log.info("Erasing output directory {}.", outFile);
-            FileUtils.cleanDirectory(outFile);
+            log.info("Erasing output directory {}.", this.outFile);
+            FileUtils.cleanDirectory(this.outFile);
         }
     }
 
-    @Override
-    protected File defaultFileName(File dir, String baseName) {
-        return new File(dir, baseName);
-    }
 
     @Override
     public void createDirectory(String dirName) throws IOException {
@@ -69,6 +72,11 @@ public class DirFileTarget extends FileTarget {
 
     @Override
     public void close() throws Exception {
+    }
+
+    @Override
+    public File getOutName() {
+        return this.outFile;
     }
 
 

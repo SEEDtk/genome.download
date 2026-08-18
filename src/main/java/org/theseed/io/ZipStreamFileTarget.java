@@ -22,26 +22,28 @@ public class ZipStreamFileTarget extends FileTarget {
 
     // FIELDS
     /** read buffer */
-    private byte[] buffer;
+    private final byte[] buffer;
     /** proposed buffer size */
     private static final int BUFFER_SIZE = 4096;
+    /** ouput file name */
+    private final File outName;
     /** zip file output stream */
-    private ZipOutputStream zipStream;
+    private final ZipOutputStream zipStream;
     /** target file output stream */
-    private OutputStream outStream;
+    private final OutputStream outStream;
 
     public ZipStreamFileTarget(FileTarget.IParms processor, File outFileName) throws IOException {
-        super(outFileName);
+        super();
         // Allocate the read buffer.
         this.buffer = new byte[BUFFER_SIZE];
+        // Compute the output file name.  If the user did not specify one, we use the default.
+        if (outFileName == null)
+            this.outName = new File(this.getBaseDir(), this.getBaseName() + ".zip");
+        else
+            this.outName = outFileName;
         // Open the zip output stream.
-        this.outStream = new FileOutputStream(this.getOutName());
+        this.outStream = new FileOutputStream(this.outName);
         this.zipStream = new ZipOutputStream(this.outStream);
-    }
-
-    @Override
-    protected File defaultFileName(File dir, String baseName) {
-        return new File(dir, baseName + ".zip");
     }
 
     @Override
@@ -78,6 +80,11 @@ public class ZipStreamFileTarget extends FileTarget {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    @Override
+    public File getOutName() {
+        return this.outName;
     }
 
 }
