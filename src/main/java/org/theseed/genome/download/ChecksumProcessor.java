@@ -111,7 +111,7 @@ public class ChecksumProcessor extends BaseProcessor {
         System.out.println("file\tmd5_checksum\tgenome_id\tgenome_name");
         for (File fastaFile : this.files) {
             try (FastaInputStream fastaStream = new FastaInputStream(fastaFile)) {
-                String checksum = this.computer.sequenceMD5(fastaStream);
+                String checksum = this.computer.contigMD5(fastaStream);
                 String genomeSpec = this.checkMap.getOrDefault(checksum, "");
                 System.out.format("%s\t%s\t%s%n", fastaFile.toString(), checksum, genomeSpec);
             }
