@@ -27,6 +27,7 @@ import org.theseed.basic.BaseProcessor;
  * project1		project subsystems into a single GTO
  * dump			dump genomes from BV-BRC
  * md5Survey    find genomes in the BV-BRC that are sequence-identical to genomes in a genome source
+ * merge		load all the genomes from files in a directory into a master directory
  *
  */
 public class App
@@ -51,7 +52,8 @@ public class App
              "sraMap", "list SRA samples corresponding to PATRIC genomes",
              "sraFasta", "create a FASTA pseudo-sample directory from sraMap output",
              "dump", "dump genomes from BV-BRC",
-             "md5Survey", "find genomes in the BV-BRC that are sequence-identical to genomes in a genome source"
+             "md5Survey", "find genomes in the BV-BRC that are sequence-identical to genomes in a genome source",
+             "merge", "load all the genomes from files in a directory into a master directory"
     };
 
     public static void main( String[] args ) {
@@ -77,6 +79,7 @@ public class App
         case "list" -> processor = new MasterListProcessor();
         case "sync" -> processor = new SynchronizeProcessor();
         case "subMap" -> processor = new SubMapProcesor();
+        case "merge" -> processor = new MergeProcessor();
         case "sraMap" -> processor = new SraMapProcessor();
         case "sraFasta" -> processor = new SraFastaProcessor();
         case "dump" -> processor = new GenomeDumpProcessor();
